@@ -1,0 +1,26 @@
+bundle: kubernetes
+
+saas:
+  grafana-dashboards:
+    url: admin/cos.grafana-dashboards
+  logging:
+    url: admin/cos.loki-logging
+  prometheus-scrape:
+    url: admin/cos.prometheus-scrape
+  prometheus-receive-remote-write:
+    url: admin/cos.prometheus-receive-remote-write
+
+applications:
+  mysql:
+    charm: /home/pguimaraes/Documents/Canonical/Engineering/DATAPLATFORM/mem-limit-guaranteed/mysql-k8s-operator/mysql-k8s_ubuntu-22.04-amd64.charm
+    scale: 1
+    storage:
+      database: 400G
+    resources:
+      mysql-image: ghcr.io/canonical/charmed-mysql@sha256:0f5fe7d7679b1881afde24ecfb9d14a9daade790ec787087aa5d8de1d7b00b21
+
+relations:
+- - mysql
+  - grafana-dashboards
+- - mysql
+  - prometheus-scrape

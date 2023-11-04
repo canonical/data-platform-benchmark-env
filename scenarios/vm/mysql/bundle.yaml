@@ -1,0 +1,56 @@
+series: jammy
+
+saas:
+  grafana-dashboards:
+    url: admin/cos.grafana-dashboards
+  logging:
+    url: admin/cos.loki-logging
+  prometheus-scrape:
+    url: admin/cos.prometheus-scrape
+  prometheus-receive-remote-write:
+    url: admin/cos.prometheus-receive-remote-write
+
+applications:
+  mysql:
+    charm: mysql
+    channel: 8.0/edge
+    constraints: instance-type=t2.xlarge root-disk=100G spaces=internal-space
+#    num_units: 3
+    num_units: 1
+    bindings:
+      "": internal-space
+    storage:
+      database: 400G
+
+  mysql-test-app:
+    charm: ./mysql-test-app/mysql-test-app_ubuntu-22.04-amd64_ubuntu-20.04-amd64.charm
+    constraints: instance-type=t2.medium root-disk=100G spaces=internal-space
+    num_units: 1
+    bindings:
+      "": internal-space
+
+  mysql-router:
+    charm: mysql-router
+    channel: dpe/edge
+    bindings:
+      "": internal-space
+
+  grafana-agent:
+    charm: grafana-agent
+    channel: latest/edge
+    bindings:
+      "": internal-space
+
+relations:
+- - mysql-test-app:database
+  - mysql-router
+- - mysql-router
+  - mysql
+- - grafana-agent
+  - mysql
+- - grafana-agent
+  - grafana-dashboards
+- - grafana-agent
+  - prometheus-receive-remote-write
+- - grafana-agent
+  - logging
