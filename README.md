@@ -28,6 +28,27 @@ sudo snap install juju --channel=3.1/stable --classic
 
 2) Setup the underneath cloud permissions
 
+2.1) AWS
+Setup an user and create an access key, as described [in aws docs](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html)
+
+
+
+TODO: check if the step below is really needed
+Install the aws-cli snap and create the files as described below.
+
+```
+~/.aws/config
+[default]
+region = us-east-1
+output = text
+
+~/.aws/credentials
+[default]
+aws_access_key_id = ...
+aws_secret_access_key = ...
+```
+
+
 3) Run setup TF in the target scenario
 
 4) Juju bootstrap

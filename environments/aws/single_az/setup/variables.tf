@@ -1,38 +1,69 @@
 variable "vpc" {
-  type = map(object({
-    name = optional(string, "test-vpc")
-    region = optional(string, "us-east-1")
-    az   = optional(string, "us-east-1a")
-    cidr = optional(string, "192.168.234.0/23")
-  }))
+  type = object({
+    name   = string
+    region = string
+    az     = string
+    cidr   = string
+  })
+  default = {
+    name   = "test-vpc"
+    region = "us-east-1"
+    az     = "us-east-1a"
+    cidr   = "192.168.234.0/23"
+  }
+}
+
+variable "AWS_ACCESS_KEY" {
+    type      = string
+    sensitive = true
+}
+
+variable "AWS_SECRET_KEY" {
+    type      = string
+    sensitive = true
 }
 
 variable "private_cidr" {
-  type = map(object({
-    cidr_block = optional(string, "192.168.235.0/24")
-    name       = optional(string, "private_cidr")
-    tags       = optional(map(string), {})
-  }))
+  type = object({
+    cidr       = string
+    name       = string
+    tags       = map(string)
+  })
+  default = {
+    cidr = "192.168.235.0/24"
+    name = "private_cidr"
+    tags = {}
+  }
 }
 
-variable "public_cidr" { 
-  type = map(object({
-    cidr_block = optional(string, "192.168.234.0/24")
-    name       = optional(string, "public_cidr")
-    tags       = optional(map(string), {})
-  }))
+variable "public_cidr" {
+  type = object({
+    cidr       = string
+    name       = string
+    tags       = map(string)
+  })
+  default = {
+    cidr = "192.168.234.0/24"
+    name = "public_cidr"
+    tags = {}
+  }
 }
+
 
 variable "jumphost_type" {
-  type = map(object({
-    name = optional(string, "jumphost")
-    vpc_name = var.vpc_name
-    root_volume_size = optional(number, 100)
-    tags = optional(map(string), {})
-  }))
+  type = object({
+    name             = string
+    root_volume_size = number
+    tags             = map(string)
+  })
+  default = {
+    name             = "jumphost"
+    root_volume_size = 100
+    tags             = {}
+  }
 }
 
 variable "key_name" {
-  type = string
+  type    = string
   default = "test-ssh-key"
 }

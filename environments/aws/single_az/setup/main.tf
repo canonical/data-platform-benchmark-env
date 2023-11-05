@@ -1,5 +1,5 @@
 terraform {
-  required_version = "~> 1.5.0"
+  required_version = ">= 1.5.0"
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -18,8 +18,9 @@ terraform {
 
 provider "aws" {
   region = var.vpc.region
+  access_key = var.AWS_ACCESS_KEY
+  secret_key = var.AWS_SECRET_KEY
 }
-
 
 // --------------------------------------------------------------------------------------
 //           Key build
@@ -37,7 +38,7 @@ resource "aws_key_pair" "generated_key" {
 
 resource "local_sensitive_file" "generated_key_path" {
   content     = tls_private_key.user_key.private_key_openssh
-  filename = "/tmp/private.key"
+  filename    = "${path.cwd}/${var.vpc.name}-private.key"
 }
 
 // --------------------------------------------------------------------------------------
@@ -59,6 +60,10 @@ resource "aws_vpc" "single_az_vpc" {
 
 resource "aws_internet_gateway" "single_az_igw" {
   vpc_id = aws_vpc.single_az_vpc.id
+
+  tags = {
+    Name = "igw-${var.vpc.name}-${var.public_cidr.name}"
+  }
 }
 
 resource "aws_subnet" "public_cidr" {
@@ -82,6 +87,9 @@ resource "aws_route_table" "public_rt" {
     cidr_block = var.vpc.cidr 
     gateway_id = "local"
   }
+  tags = {
+    Name = "public-rt-${var.vpc.name}-${var.public_cidr.name}"
+  }
 }
 
 resource "aws_route_table_association" "public_rt_assoc" {
@@ -96,16 +104,20 @@ resource "aws_route_table_association" "public_rt_assoc" {
 
 resource "aws_eip" "jumphost_nat_eip" {
   domain                    = "vpc"
-  instance = aws_instance.jumphost.id
+  depends_on = [aws_internet_gateway.single_az_igw]
 }
 
 
 resource "aws_nat_gateway" "single_az_nat" {
-  allocation_id = aws_eip.example.id
-  subnet_id     = aws_subnet.private_cidr.id
+  allocation_id = aws_eip.jumphost_nat_eip.id
+  subnet_id     = aws_subnet.public_cidr.id
   connectivity_type = "public"
 
-  depends_on = [aws_internet_gateway.single_az_igw]
+  tags = {
+    Name = "nat-${var.vpc.name}-${var.private_cidr.name}"
+  }
+
+  depends_on = [aws_eip.jumphost_nat_eip]
 }
 
 resource "aws_subnet" "private_cidr" {
@@ -128,6 +140,9 @@ resource "aws_route_table" "private_rt" {
   route {
     cidr_block = var.vpc.cidr
     gateway_id = "local"
+  }
+  tags = {
+    Name = "private-rt-${var.vpc.name}-${var.private_cidr.name}"
   }
 }
 
@@ -157,11 +172,25 @@ data "aws_ami" "ubuntu" {
   owners = ["099720109477"] # Canonical
 }
 
-resource "aws_network_interface" "jumphost_nic" {
-  subnet_id   = aws_subnet.public_cidr.id
+resource "aws_security_group" "sg_jumphost" {
+  description = "SSH access to the jumphost"
+  vpc_id      = aws_vpc.single_az_vpc.id
 
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  egress {
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = ["::/0"]
+  }
   tags = {
-    Name = "primary_network_interface"
+    Name = "${var.vpc.name}-jumphost-sg"
   }
 }
 
@@ -169,18 +198,16 @@ resource "aws_instance" "jumphost" {
   ami = data.aws_ami.ubuntu.id
   instance_type = "t2.micro"
   key_name      = aws_key_pair.generated_key.key_name
-
-  network_interface {
-    network_interface_id = aws_network_interface.jumphost_nic.id
-    device_index         = 0
-  }
+  subnet_id   = aws_subnet.public_cidr.id
+  vpc_security_group_ids = [aws_security_group.sg_jumphost.id]
 
   tags = {
-    Name = "jumphost"
+    Name = "${var.vpc.name}-jumphost"
   }
 }
 
 resource "aws_eip" "jumphost_elastic_ip" {
   domain                    = "vpc"
   instance = aws_instance.jumphost.id
+  depends_on = [aws_instance.jumphost]
 }

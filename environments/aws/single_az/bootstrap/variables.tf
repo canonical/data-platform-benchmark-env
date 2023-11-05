@@ -1,25 +1,33 @@
-variable "aws_creds" {
-  type = optional(string, "aws_creds")
+variable "aws_creds_name" {
+    type    = string
+    default = "aws_creds"
 }
 
 variable "vpc_id" {
     type = string
 }
 
-variable "access_key" {
-    type = map(object({
-        auth_key   = string
-        secret_key = string
-    }))
+variable "AWS_ACCESS_KEY" {
+    type = string
+    sensitive = true
+}
+
+variable "AWS_SECRET_KEY" {
+    type = string
+    sensitive = true
 }
 
 variable "private_cidr" {
-  type = string
+    type = string
 }
 
 variable "constraints" {
-    type = map(object({
-        instance_type  = optional(string, "t2.medium")
-        root_disk_size = optional(string, "100G")
-    }))
+    type = object({
+        instance_type  = string
+        root_disk_size = string
+    })
+    default = {
+        instance_type  = "t2.medium"
+        root_disk_size = "100G"
+    }
 }

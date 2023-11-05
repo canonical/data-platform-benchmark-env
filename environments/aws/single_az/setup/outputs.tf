@@ -1,10 +1,10 @@
 output "jumphost_elastic_ip" {
   description = "The IPv4 address of the instance."
-  value       = aws_instance.instance.public_ip
+  value       = aws_eip.jumphost_elastic_ip.public_ip
 }
 
 output "private_key_file" {
-  value     = tls_private_key.generated_key_path.filename
+  value     = local_sensitive_file.generated_key_path.filename
 }
 
 output "vpc_id" {
