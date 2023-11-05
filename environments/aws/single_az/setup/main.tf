@@ -5,6 +5,14 @@ terraform {
       source  = "hashicorp/aws"
       version = ">= 5.0.0"
     }
+    tls = {
+      source = "hashicorp/tls"
+      version = ">= 4.0.4"
+    }
+    local = {
+      source = "hashicorp/local"
+      version = ">= 2.4.0"
+    }
   }
 }
 
@@ -25,6 +33,11 @@ resource "tls_private_key" "user_key" {
 resource "aws_key_pair" "generated_key" {
   key_name   = var.key_name
   public_key = tls_private_key.user_key.public_key_openssh
+}
+
+resource "local_sensitive_file" "generated_key_path" {
+  content     = tls_private_key.user_key.private_key_openssh
+  filename = "/tmp/private.key"
 }
 
 // --------------------------------------------------------------------------------------
@@ -171,4 +184,3 @@ resource "aws_eip" "jumphost_elastic_ip" {
   domain                    = "vpc"
   instance = aws_instance.jumphost.id
 }
-

@@ -1,0 +1,11 @@
+[Unit]
+Description=sshuttle service a permanent tunnel
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/sshuttle -r ubuntu@{{ jumphost_ip }} {{ cidr }} --pidfile=/var/run/sshuttle.pid -e 'ssh -i {{ keypath }}'
+Restart=always
+Type=forking
+
+[Install]
+WantedBy=multi-user.target

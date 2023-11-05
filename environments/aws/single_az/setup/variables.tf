@@ -3,13 +3,13 @@ variable "vpc" {
     name = optional(string, "test-vpc")
     region = optional(string, "us-east-1")
     az   = optional(string, "us-east-1a")
-    cidr = optional(string, "10.0.0.0/23")
+    cidr = optional(string, "192.168.234.0/23")
   }))
 }
 
 variable "private_cidr" {
   type = map(object({
-    cidr_block = optional(string, "10.0.1.0/24")
+    cidr_block = optional(string, "192.168.235.0/24")
     name       = optional(string, "private_cidr")
     tags       = optional(map(string), {})
   }))
@@ -17,7 +17,7 @@ variable "private_cidr" {
 
 variable "public_cidr" { 
   type = map(object({
-    cidr_block = optional(string, "10.0.0.0/24")
+    cidr_block = optional(string, "192.168.234.0/24")
     name       = optional(string, "public_cidr")
     tags       = optional(map(string), {})
   }))

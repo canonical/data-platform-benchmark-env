@@ -1,5 +1,14 @@
+Depends on:
+- sshuttle
+- python3
+- python3-jinja2
+- juju
+- terraform
+
+
 Organization:
 
+```
 +
 |
 +--- environment/          Configures the different VM clouds in Juju
@@ -7,6 +16,7 @@ Organization:
 |     +--- cos-microk8s/   Configures the COS environment for any of the following deployments, including the microk8s underneath it
 |
 +--- scenarios/            Configures the different deployment scenarios and testing. Should be used once a model has been correctly added and configured
+```
 
 
 1) Install terraform and Juju
