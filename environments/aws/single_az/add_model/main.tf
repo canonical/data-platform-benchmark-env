@@ -8,8 +8,17 @@ terraform {
   }
 }
 
-resource "juju_model" "aws_model" {
+provider "juju" {}
+
+resource "juju_model" "new_model" {
   name = var.name
+
+  connection {
+    type     = "ssh"
+    user     = "root"
+    password = var.
+    host     = self.public_jumphost_ip
+  }
 
   cloud {
     name   = "aws"

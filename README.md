@@ -1,9 +1,17 @@
+Start only with credentials for your Juju cloud and start deploying.
+
+A bag of terraform scripts to setup environments on popular clouds.
+
 Depends on:
 - sshuttle
 - python3
 - python3-jinja2
 - juju
 - terraform
+
+If you plan to bring your own bundle once the deployment is done, then consider the following spaces:
+* internal-space: subnets isolated within the tenant and accessible only via a jumphost.
+* ingress-space:  subnets in the public networks, where a Floating/Elastic/Public IP can be assigned to the VM and it becomes externally reachable.
 
 
 Organization:

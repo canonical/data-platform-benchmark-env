@@ -1,34 +1,3 @@
-/*
-
-  # It is not possible to add credentials before actually having a controller.
-  terraform {
-    required_version = ">= 1.5.0"
-    required_providers {
-      juju = {
-        version = ">= 0.3.1"
-        source  = "juju/juju"
-      }
-    }
-  }
-
-  provider "juju" {}
-
-  resource "juju_credential" "aws_creds" {
-    name = var.aws_creds_name
-
-    cloud {
-      name = "aws"
-    }
-
-    auth_type = "access-key"
-
-    attributes = {
-      auth-key   = var.AWS_ACCESS_KEY
-      secret-key = var.AWS_SECRET_KEY
-    }
-  }
-*/
-
 terraform {
   required_version = ">= 1.5.0"
   required_providers {
@@ -43,7 +12,7 @@ locals {
   credential = {
     credentials = {
       aws = {
-        aws_creds = {
+        aws_tf_creds = {
           auth-type = "access-key"
           access-key = var.AWS_ACCESS_KEY
           secret-key = var.AWS_SECRET_KEY
@@ -80,9 +49,18 @@ resource "terraform_data" "remove_creds_file" {
 resource "terraform_data" "bootstrap" {
 
   provisioner "local-exec" {
-    command = "juju bootstrap aws --credential aws_creds  --model-default vpc-id=${var.vpc_id} --model-default vpc-id-force=true --config vpc-id=${var.vpc_id} --config vpc-id-force=true --constraints 'instance-type=${var.constraints.instance_type} root-disk=${var.constraints.root_disk_size}' --to subnet=${var.private_cidr}"
+    command = "juju bootstrap aws aws-tf-controller --credential aws_tf_creds  --model-default vpc-id=${var.vpc_id} --model-default vpc-id-force=true --config vpc-id=${var.vpc_id} --config vpc-id-force=true --constraints 'instance-type=${var.constraints.instance_type} root-disk=${var.constraints.root_disk_size}' --to subnet=${var.private_cidr}"
   }
 
-#  depends_on = [juju_credential.aws_creds]
+  provisioner "local-exec" {
+    when = destroy
+    command = "juju destroy-controller --destroy-storage --destroy-all-models --force --no-wait aws-tf-controller"
+  }
+
+  provisioner "local-exec" {
+    when = destroy
+    command = "juju remove-credential aws aws_tf_creds"
+  }
+
   depends_on = [terraform_data.remove_creds_file]
 }
