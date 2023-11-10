@@ -21,6 +21,11 @@ variable "private_cidr" {
     type = string
 }
 
+variable "controller_name" {
+    type = string
+    default = "aws-tf-controller"
+}
+
 variable "constraints" {
     type = object({
         instance_type  = string

@@ -1,5 +1,9 @@
 Start only with credentials for your Juju cloud and start deploying.
 
+
+TODO: FOR SECRETS - advise to use environment variables for AWS
+TODO: keep the tfstate strictly in S3 bucket (that already exists) and is private to only the TF users
+
 A bag of terraform scripts to setup environments on popular clouds.
 
 Depends on:

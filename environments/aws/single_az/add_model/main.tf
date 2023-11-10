@@ -1,24 +1,22 @@
 terraform {
-  required_version = "~> 1.5.0"
+  required_version = ">= 1.5.0"
   required_providers {
     juju = {
-      source  = "juju"
-      version = ">= 5.0.0"
+      source  = "juju/juju"
+      version = ">= 0.3.1"
     }
   }
 }
 
-provider "juju" {}
+provider juju {
+  controller_addresses = var.controller_info.api_endpoints
+  username = var.controller_info.username
+  password = var.controller_info.password
+  ca_certificate = var.controller_info.ca_cert
+}
 
 resource "juju_model" "new_model" {
   name = var.name
-
-  connection {
-    type     = "ssh"
-    user     = "root"
-    password = var.
-    host     = self.public_jumphost_ip
-  }
 
   cloud {
     name   = "aws"
@@ -35,10 +33,12 @@ resource "juju_model" "new_model" {
 }
 
 resource "terraform_data" "add_space" {
+  for_each = {
+    for index, space in var.spaces:
+    space.name => space
+  }
+
   provisioner "local-exec" {
-    dynamic "space" {
-      for_each = var.spaces
-      command = "juju add-space space.name ${join(" ", space.subnets)}"
-    }
+    command = "juju add-space --model ${var.name} ${each.key} ${join(" ", each.value.subnets)}"
   }
 }
