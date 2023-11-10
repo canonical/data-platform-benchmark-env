@@ -84,16 +84,3 @@ data "local_file" "account_info" {
 
   depends_on = [null_resource.bootstrap]
 }
-
-
-
-/*
-  name = var.controller_name
-  api_endpoints = join(",", yamldecode(file(pathexpand("~/.local/share/juju/controllers.yaml")))["controllers"][var.controller_name]["api-endpoints"])
-  ca_cert = yamldecode(file(pathexpand("~/.local/share/juju/controllers.yaml")))["controllers"][var.controller_name]["ca-cert"]
-  username = yamldecode(file(pathexpand("~/.local/share/juju/accounts.yaml")))["controllers"][var.controller_name]["user"]
-  password = yamldecode(file(pathexpand("~/.local/share/juju/accounts.yaml")))["controllers"][var.controller_name]["password"]
-
-  depends_on = [null_resource.bootstrap]
-}
-*/

@@ -32,6 +32,20 @@ resource "juju_model" "new_model" {
   }
 }
 
+data "local_file" "pub_key" {
+  filename = pathexpand("~/.local/share/juju/ssh/juju_id_rsa.pub")
+
+}
+
+
+resource "juju_ssh_key" "add_key" {
+  model   = var.name
+  payload = data.local_file.juju_pub_key.content
+
+  depends_on = [resource.juju_model.new_model]
+}
+
+
 resource "terraform_data" "add_space" {
   for_each = {
     for index, space in var.spaces:
@@ -41,4 +55,6 @@ resource "terraform_data" "add_space" {
   provisioner "local-exec" {
     command = "juju add-space --model ${var.name} ${each.key} ${join(" ", each.value.subnets)}"
   }
+
+  depends_on = [resource.juju_ssh_key.add_key]
 }

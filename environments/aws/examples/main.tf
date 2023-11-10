@@ -8,14 +8,13 @@ variable "AWS_SECRET_KEY" {
     sensitive = true
 }
 
-
 module "aws_vpc" {
-    source = "../environments/aws/single_az/setup/"
+    source = "../single_az/setup/"
 
     AWS_ACCESS_KEY = var.AWS_ACCESS_KEY
     AWS_SECRET_KEY = var.AWS_SECRET_KEY
 }
-/*
+
 module "sshuttle" {
     source = "../utils/sshuttle/"
 
@@ -27,7 +26,7 @@ module "sshuttle" {
 }
 
 module "aws_juju_bootstrap" {
-    source = "../environments/aws/single_az/bootstrap/"
+    source = "../single_az/bootstrap/"
 
     aws_creds_name = "aws_creds_us_east_1"
     vpc_id = module.aws_vpc.vpc_id
@@ -39,7 +38,7 @@ module "aws_juju_bootstrap" {
 }
 
 module "add_mysql_model" {
-    source = "../environments/aws/single_az/add_model/"
+    source = "../single_az/add_model/"
 
     name = "mysql"
     region = module.aws_vpc.vpc.region
@@ -47,4 +46,3 @@ module "add_mysql_model" {
     controller_info = module.aws_juju_bootstrap.controller_info
 
 }
-*/
