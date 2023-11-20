@@ -8,7 +8,7 @@ terraform {
   }
 }
 
-provider juju {
+provider "juju" {
   controller_addresses = var.controller_info.api_endpoints
   username = var.controller_info.username
   password = var.controller_info.password
@@ -40,7 +40,7 @@ data "local_file" "pub_key" {
 
 resource "juju_ssh_key" "add_key" {
   model   = var.name
-  payload = data.local_file.juju_pub_key.content
+  payload = data.local_file.pub_key.content
 
   depends_on = [resource.juju_model.new_model]
 }

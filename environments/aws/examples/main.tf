@@ -1,3 +1,4 @@
+
 variable "AWS_ACCESS_KEY" {
     type      = string
     sensitive = true
@@ -16,7 +17,7 @@ module "aws_vpc" {
 }
 
 module "sshuttle" {
-    source = "../utils/sshuttle/"
+    source = "../../../utils/sshuttle/"
 
     jumphost_ip = module.aws_vpc.jumphost_elastic_ip
     subnet = module.aws_vpc.vpc.cidr
@@ -37,6 +38,7 @@ module "aws_juju_bootstrap" {
     depends_on = [module.sshuttle]
 }
 
+/*
 module "add_mysql_model" {
     source = "../single_az/add_model/"
 
@@ -46,3 +48,4 @@ module "add_mysql_model" {
     controller_info = module.aws_juju_bootstrap.controller_info
 
 }
+*/

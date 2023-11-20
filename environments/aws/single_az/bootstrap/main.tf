@@ -24,6 +24,8 @@ locals {
       }
     }
   }
+  controllers_map = yamldecode(file(data.local_file.controller_info.filename))["controllers"]
+  accounts_map    = yamldecode(file(data.local_file.account_info.filename))["controllers"]
 }
 
 resource "local_sensitive_file" "generate_creds_yaml" {
@@ -60,14 +62,14 @@ resource "null_resource" "bootstrap" {
     command = "juju bootstrap aws ${var.controller_name} --credential aws_tf_creds  --model-default vpc-id=${var.vpc_id} --model-default vpc-id-force=true --config vpc-id=${var.vpc_id} --config vpc-id-force=true --constraints 'instance-type=${var.constraints.instance_type} root-disk=${var.constraints.root_disk_size}' --to subnet=${var.private_cidr}"
   }
 
-  provisioner "local-exec" {
-    when = destroy
-    command = "juju destroy-controller --destroy-storage --destroy-all-models --force --no-wait ${self.triggers.controller_name}"
-  }
+#  provisioner "local-exec" {
+#    when = destroy
+#    command = "juju destroy-controller --yes --destroy-storage --destroy-all-models --force --no-wait ${self.triggers.controller_name}"
+#  }
 
   provisioner "local-exec" {
     when = destroy
-    command = "juju remove-credential aws aws_tf_creds"
+    command = "juju remove-credential aws aws_tf_creds --client"
   }
 
   depends_on = [null_resource.remove_creds_file]

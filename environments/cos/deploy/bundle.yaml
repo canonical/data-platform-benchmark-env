@@ -19,11 +19,15 @@ applications:
     scale: 1
     trust: true
     channel: stable
+    storage:
+      database: 450G
   grafana:
     charm: grafana-k8s
     scale: 1
     trust: true
     channel: stable
+    storage:
+      database: 20G
   catalogue:
     charm: catalogue-k8s
     scale: 1
@@ -40,7 +44,6 @@ applications:
     scale: 1
     trust: true
     channel: stable
-
 relations:
 - [traefik:ingress-per-unit, prometheus:ingress]
 - [traefik:ingress-per-unit, loki:ingress]
