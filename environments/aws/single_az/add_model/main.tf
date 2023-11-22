@@ -1,4 +1,3 @@
-/*
 terraform {
   required_version = ">= 1.5.0"
   required_providers {
@@ -6,15 +5,21 @@ terraform {
       source  = "juju/juju"
       version = ">= 0.3.1"
     }
+    null = {
+      source = "hashicorp/null"
+      version = "3.2.1"
+    }
   }
 }
 
+/*
 provider "juju" {
   controller_addresses = var.controller_info.api_endpoints
   username = var.controller_info.username
   password = var.controller_info.password
   ca_certificate = var.controller_info.ca_cert
 }
+*/
 
 resource "juju_model" "new_model" {
   name = var.name
@@ -25,6 +30,7 @@ resource "juju_model" "new_model" {
   }
 
   config = {
+    container-networking-method = "local"
     logging-config              = "<root>=INFO"
     development                 = true
     vpc-id                      = var.vpc_id
@@ -34,16 +40,26 @@ resource "juju_model" "new_model" {
 }
 
 data "local_file" "pub_key" {
-  filename = pathexpand("~/.local/share/juju/ssh/juju_id_rsa.pub")
-
+  filename = pathexpand("~/.ssh/id_rsa.pub")
 }
 
+#locals {
+#  ssh_key = join(" ", ["ssh-rsa", element(split(" ", data.local_file.pub_key.content), 1)])
+#}
 
 resource "juju_ssh_key" "add_key" {
   model   = var.name
   payload = data.local_file.pub_key.content
+#  payload = local.ssh_key
 
   depends_on = [resource.juju_model.new_model]
+
+#  # Seems that the juju_ssh_key resource does not support the destroy lifecycle
+#  provisioner "local-exec" {
+#    when = destroy
+#    command = "juju remove-ssh-key --model ${self.model} ${self.payload}"
+#  }
+
 }
 
 resource "terraform_data" "add_space" {
@@ -58,7 +74,9 @@ resource "terraform_data" "add_space" {
 
   depends_on = [resource.juju_ssh_key.add_key]
 }
-*/
+
+/*
+## NON JUJU TF PROVIDER, using only local-exec
 
 locals {
   model_config = {
@@ -89,3 +107,4 @@ resource "terraform_data" "add_model_with_spaces" {
     command = "juju add-space --model ${var.name} ${each.key} ${join(" ", each.value.subnets)}"
   }
 }
+*/

@@ -10,8 +10,10 @@ Depends on:
 - sshuttle
 - python3
 - python3-jinja2
-- juju
-- terraform
+- juju snap
+- terraform snap
+- juju-wait snap
+- kubectl snap, in sync with microk8s to be used by COS setup (TODO: make the COS microk8s re-use the same kubectl version)
 
 If you plan to bring your own bundle once the deployment is done, then consider the following spaces:
 * internal-space: subnets isolated within the tenant and accessible only via a jumphost.

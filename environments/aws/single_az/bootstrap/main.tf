@@ -33,12 +33,16 @@ resource "local_sensitive_file" "generate_creds_yaml" {
   filename    = "${path.cwd}/credentials.yaml"
 }
 
-resource "terraform_data" "add_creds" {
+resource "terraform_data" "manage_creds" {
 
   provisioner "local-exec" {
     command = "juju add-credential aws -f ${path.cwd}/credentials.yaml --client"
   }
 
+  provisioner "local-exec" {
+    when = destroy
+    command = "juju remove-credential aws aws_tf_creds --client"
+  }
   depends_on = [local_sensitive_file.generate_creds_yaml]
 }
 
@@ -49,7 +53,7 @@ resource "null_resource" "remove_creds_file" {
     command = "rm -rf ${path.cwd}/credentials.yaml"
   }
 
-  depends_on = [terraform_data.add_creds]
+  depends_on = [terraform_data.manage_creds]
 }
 
 resource "null_resource" "bootstrap" {
@@ -58,14 +62,15 @@ resource "null_resource" "bootstrap" {
     controller_name = var.controller_name
   }
 
+  # Remove the fan-networking from model-config by setting container-networking-method=local
   provisioner "local-exec" {
-    command = "juju bootstrap aws ${var.controller_name} --credential aws_tf_creds  --model-default vpc-id=${var.vpc_id} --model-default vpc-id-force=true --config vpc-id=${var.vpc_id} --config vpc-id-force=true --constraints 'instance-type=${var.constraints.instance_type} root-disk=${var.constraints.root_disk_size}' --to subnet=${var.private_cidr}"
+    command = "juju bootstrap aws ${var.controller_name} --credential aws_tf_creds --model-default vpc-id=${var.vpc_id} --model-default vpc-id-force=true --model-default container-networking-method=local --config vpc-id=${var.vpc_id} --config vpc-id-force=true --config container-networking-method=local --constraints 'instance-type=${var.constraints.instance_type} root-disk=${var.constraints.root_disk_size}' --to subnet=${var.private_cidr}"
   }
 
-#  provisioner "local-exec" {
-#    when = destroy
-#    command = "juju destroy-controller --yes --destroy-storage --destroy-all-models --force --no-wait ${self.triggers.controller_name}"
-#  }
+  provisioner "local-exec" {
+    when = destroy
+    command = "juju destroy-controller --no-prompt --destroy-storage --destroy-all-models --force --no-wait ${self.triggers.controller_name} --model-timeout=1800s"
+  }
 
   provisioner "local-exec" {
     when = destroy

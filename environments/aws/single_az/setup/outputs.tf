@@ -3,6 +3,11 @@ output "vpc" {
   value = var.vpc
 }
 
+output "ami_id" {
+  description = "AMI ID copied from variable to the next stage"
+  value = data.aws_ami.ubuntu.id
+}
+
 output "private_cidr" {
   description = "Private CIDR copied from variable to the next stage"
   value = var.private_cidr.cidr
@@ -22,7 +27,16 @@ output "private_key_file" {
   value     = local_sensitive_file.generated_key_path.filename
 }
 
+output "key_name" {
+  value     = aws_key_pair.generated_key.key_name
+}
+
 output "vpc_id" {
   description = "The vpc id."
   value       = aws_vpc.single_az_vpc.id
+}
+
+output "private_subnet_id" {
+  description = "ID of the private subnet created"
+  value = aws_subnet.private_cidr.id
 }
