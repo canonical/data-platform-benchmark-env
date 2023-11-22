@@ -13,3 +13,8 @@ output "controller_info" {
         password = yamldecode(data.local_file.account_info.content)["controllers"][var.controller_name]["password"]
     }
 }
+
+output "private_subnet_id" {
+  description = "ID of the private subnet created"
+  value = aws_subnet.private_cidr.id
+}

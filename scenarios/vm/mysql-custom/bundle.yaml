@@ -1,0 +1,59 @@
+series: jammy
+
+saas:
+  grafana-dashboards:
+    url: admin/cos.grafana-dashboards
+  logging:
+    url: admin/cos.loki-logging
+  prometheus-scrape:
+    url: admin/cos.prometheus-scrape
+  prometheus-receive-remote-write:
+    url: admin/cos.prometheus-receive-remote-write
+
+applications:
+  mysql:
+    charm: /home/pguimaraes/Documents/Canonical/Engineering/DATAPLATFORM/DPE-2984-perf-testing/mysql-operator/mysql_ubuntu-22.04-amd64.charm
+    constraints: instance-type=c6a.2xlarge root-disk=100G spaces=internal-space
+    num_units: 3
+    bindings:
+      "": internal-space
+    storage:
+      database: 400G
+
+  mysql-test-app:
+    charm: /home/pguimaraes/Documents/Canonical/Engineering/DATAPLATFORM/DPE-2984-perf-testing/sysbench-perf-operator/sysbench-perf-operator_ubuntu-22.04-amd64.charm
+    constraints: instance-type=c6a.large root-disk=100G spaces=internal-space
+    resources:
+      script: /home/pguimaraes/Documents/Canonical/Engineering/DATAPLATFORM/DPE-2984-perf-testing/sysbench-perf-operator/master.zip
+    num_units: 1
+    bindings:
+      "": internal-space
+
+#  mysql-router:
+#    charm: mysql-router
+#    channel: dpe/edge
+#    bindings:
+#      "": internal-space
+
+  grafana-agent:
+    charm: grafana-agent
+    channel: latest/edge
+    bindings:
+      "": internal-space
+
+relations:
+- - mysql-test-app:database
+  - mysql
+#  - mysql-router
+- - mysql-test-app
+  - grafana-agent
+#- - mysql-router
+#  - mysql
+- - grafana-agent
+  - mysql
+- - grafana-agent
+  - grafana-dashboards
+- - grafana-agent
+  - prometheus-receive-remote-write
+- - grafana-agent
+  - logging

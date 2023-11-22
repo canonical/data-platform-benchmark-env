@@ -1,3 +1,4 @@
+/*
 terraform {
   required_version = ">= 1.5.0"
   required_providers {
@@ -45,7 +46,6 @@ resource "juju_ssh_key" "add_key" {
   depends_on = [resource.juju_model.new_model]
 }
 
-
 resource "terraform_data" "add_space" {
   for_each = {
     for index, space in var.spaces:
@@ -57,4 +57,35 @@ resource "terraform_data" "add_space" {
   }
 
   depends_on = [resource.juju_ssh_key.add_key]
+}
+*/
+
+locals {
+  model_config = {
+    logging-config              = "<root>=INFO"
+    development                 = true
+    vpc-id                      = var.vpc_id
+    vpc-id-force                = true
+    update-status-hook-interval = "1m"
+  }
+}
+
+resource "local_sensitive_file" "generate_model_config_yaml" {
+  content     = yamlencode(local.model_config)
+  filename    = "${path.cwd}/model-config.yaml"
+}
+
+resource "terraform_data" "add_model_with_spaces" {
+  for_each = {
+    for index, space in var.spaces:
+    space.name => space
+  }
+
+  provisioner "local-exec" {
+    command = "juju add-model ${var.name} aws --config ${local_sensitive_file.generate_model_config_yaml.filename}"
+  }
+
+  provisioner "local-exec" {
+    command = "juju add-space --model ${var.name} ${each.key} ${join(" ", each.value.subnets)}"
+  }
 }
