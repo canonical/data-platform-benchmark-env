@@ -282,8 +282,8 @@ resource "juju_model" "metallb_model" {
   provisioner "local-exec" {
     when = destroy
     command = <<-EOT
-    juju remove-cloud ${self.cloud.name} --client;
-    juju remove-credential ${self.cloud.name} ${self.cloud.name} --client
+    juju remove-credential ${self.cloud[0].name} ${self.cloud[0].name} --client;
+    juju remove-cloud ${self.cloud[0].name} --client
     EOT
   }
 
