@@ -43,6 +43,11 @@ resource "local_sensitive_file" "generated_key_path" {
   filename    = "${path.cwd}/${var.vpc.name}-private.key"
 }
 
+resource "local_sensitive_file" "generated_public_key_path" {
+  content     = tls_private_key.user_key.public_key_openssh
+  filename    = "${path.cwd}/${var.vpc.name}-public.key"
+}
+
 // --------------------------------------------------------------------------------------
 //           VPC build   
 // --------------------------------------------------------------------------------------

@@ -4,12 +4,12 @@ output "controller_name" {
 }
 
 output "controller_info" {
-    description = ""
-    value = {
-        name = var.controller_name
-        api_endpoints = join(",", yamldecode(data.local_file.controller_info.content)["controllers"][var.controller_name]["api-endpoints"])
-        ca_cert = yamldecode(data.local_file.controller_info.content)["controllers"][var.controller_name]["ca-cert"]
-        username = yamldecode(data.local_file.account_info.content)["controllers"][var.controller_name]["user"]
-        password = yamldecode(data.local_file.account_info.content)["controllers"][var.controller_name]["password"]
-    }
+  description = "Controller info"
+  value = {
+      name = var.controller_name
+      api_endpoints = join(",", yamldecode(data.external.juju_controller_info.result["output"])[var.controller_name]["details"]["api-endpoints"])
+      ca_cert = yamldecode(data.external.juju_controller_info.result["output"])[var.controller_name]["details"]["ca-cert"]
+      username = yamldecode(data.external.juju_controller_info.result["output"])[var.controller_name]["account"]["user"]
+      password = yamldecode(data.external.juju_controller_info.result["output"])[var.controller_name]["account"]["password"]        
+  }
 }

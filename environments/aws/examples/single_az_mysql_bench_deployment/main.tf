@@ -48,6 +48,10 @@ terraform {
       source  = "juju/juju"
       version = ">= 0.3.1"
     }
+    external = {
+      source = "hashicorp/external"
+      version = ">=2.3.2"
+    }
   }
 }
 
@@ -125,21 +129,26 @@ module "deploy_cos" {
 
     providers = {
         aws = aws.us-east1
+        juju = juju.aws-juju
     }
 
-    #AWS_ACCESS_KEY = var.AWS_ACCESS_KEY
-    #AWS_SECRET_KEY = var.AWS_SECRET_KEY
     model_name = var.microk8s_model_name
     vpc_id = module.aws_vpc.vpc_id
     private_subnet_id = module.aws_vpc.private_subnet_id
     aws_key_name = module.aws_vpc.key_name
-    key_path = module.aws_vpc.private_key_file
+    aws_private_key_path = module.aws_vpc.private_key_file
+    public_key_path = pathexpand("~/.ssh/id_rsa.pub")
+    private_key_path = pathexpand("~/.ssh/id_rsa")
+    controller_name = module.aws_juju_bootstrap.controller_name
+
+
     ami_id = module.aws_vpc.ami_id
     cos_microk8s_bundle = pathexpand("../../../cos/deploy/bundle.yaml")
     cos_microk8s_overlay = pathexpand("../../../cos/deploy/offers-overlay.yaml")
 
     depends_on = [module.add_microk8s_model]
 }
+
 
 module "add_mysql_model" {
     source = "../../single_az/add_model/"

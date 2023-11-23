@@ -13,32 +13,16 @@ terraform {
       source = "hashicorp/null"
       version = "3.2.1"
     }
-    /*
     juju = {
       source  = "juju/juju"
       version = ">= 0.3.1"
     }
-    */
+    external = {
+      source = "hashicorp/external"
+      version = ">=2.3.2"
+    }
   }
 }
-
-/*
-provider "aws" {
-  region = var.vpc.region
-  access_key = var.AWS_ACCESS_KEY
-  secret_key = var.AWS_SECRET_KEY
-}
-
-variable "AWS_ACCESS_KEY" {
-    type      = string
-    sensitive = true
-}
-
-variable "AWS_SECRET_KEY" {
-    type      = string
-    sensitive = true
-}
-*/
 
 variable "vpc_id" {
   type = string
@@ -57,7 +41,15 @@ variable "aws_key_name" {
   description = "Name of the SSH key pair to associate with the instance"
 }
 
-variable "key_path" {
+variable "aws_private_key_path" {
+  description = "Path to the AWS SSH private key"
+}
+
+variable "private_key_path" {
+  description = "Path to the SSH private key"
+}
+
+variable "public_key_path" {
   description = "Path to the SSH private key"
 }
 
@@ -71,6 +63,11 @@ variable "cos_microk8s_bundle" {
 
 variable "cos_microk8s_overlay" {
   type = string
+}
+
+variable "controller_name" {
+  type = string
+  description = "Name of the controller"
 }
 
 variable "space_name" {
@@ -188,122 +185,157 @@ resource "aws_instance" "microk8s_vm" {
   depends_on = [aws_security_group.cos_microk8s_sg, aws_network_interface.microk8s_nic]
 }
 
-data "local_file" "juju_pub_key" {
-  filename = pathexpand(var.juju_pub_key)
 
-  depends_on = [aws_instance.microk8s_vm]
+resource "local_file" "id_rsa_pub_key"  {
+  filename = var.public_key_path
+  content  = file(pathexpand(var.public_key_path))
 }
 
-data "local_file" "ssh_known_hosts" {
-  filename = pathexpand("~/.ssh/known_hosts")
-
-  depends_on = [aws_instance.microk8s_vm]
-}
-
-resource "null_resource" "clean_known_hosts" {
-
-#  # Prepare machine: add the juju key so we do not have a prompt with SSH
-#  provisioner "local-exec" {
-#    command = "ssh -i ${var.key_path} -o StrictHostKeyChecking=no ubuntu@${aws_network_interface.microk8s_nic.private_ip_list.0} \"echo '${data.local_file.juju_pub_key.content}' >> /home/ubuntu/.ssh/authorized_keys\""
-#  }
-
-#  provisioner "local-exec" {
-#    command = "ssh-keygen -R ${aws_network_interface.microk8s_nic.private_ip_list.0} || true"
-##      "ssh-keyscan -H ${aws_network_interface.microk8s_nic.private_ip_list.0} >> ${data.local_file.ssh_known_hosts.filename}"
-##    EOT
-#  }
-
-  # Disable fan networking
-  provisioner "local-exec" {
-    command = "ssh-keygen -R ${aws_network_interface.microk8s_nic.private_ip_list.0} || true; for i in {0..5}; do sleep 60s; ssh -i ${var.key_path} -o StrictHostKeyChecking=no ubuntu@${aws_network_interface.microk8s_nic.private_ip_list.0} exit || true; done"
-  }
-
-  depends_on = [aws_instance.microk8s_vm, data.local_file.juju_pub_key]
-}
-
-
-
-resource "null_resource" "deploy_microk8s" {
-
-  # Add the machine
+resource "null_resource" "wait_microk8s_vm" {
   provisioner "local-exec" {
     command = <<-EOT
-    juju add-machine ssh:ubuntu@${aws_network_interface.microk8s_nic.private_ip_list.0} --model ${var.model_name} --private-key ${var.key_path};
-    juju ssh --model ${var.model_name} 0 sudo fanctl down -a;
-    juju deploy microk8s --channel=${var.microk8s_charm_channel} --config hostpath_storage=true --model ${var.model_name} --bind ${var.space_name} --to=0;
-    juju-wait --model ${var.model_name}
+    ssh-keygen -R ${aws_network_interface.microk8s_nic.private_ip_list.0} || true;
+    for i in {0..5}; do 
+      sleep 60s;
+      ssh -i ${var.aws_private_key_path} -o StrictHostKeyChecking=no ubuntu@${aws_network_interface.microk8s_nic.private_ip_list.0} exit;
+      if [[ $? -eq 0 ]]; then
+        break;
+      fi;
+    done;
+    ssh -i ${var.aws_private_key_path} -o StrictHostKeyChecking=no ubuntu@${aws_network_interface.microk8s_nic.private_ip_list.0} "echo '${local_file.id_rsa_pub_key.content}' >> ~/.ssh/authorized_keys"
     EOT
+    interpreter = ["/bin/bash", "-c"]
   }
-  depends_on = [null_resource.clean_known_hosts]
+  depends_on = [aws_instance.microk8s_vm]
+}
+
+resource "juju_machine" "microk8s_vm" {
+  model = var.model_name
+  private_key_file = var.private_key_path
+  public_key_file = var.public_key_path
+
+  ssh_address = "ubuntu@${aws_network_interface.microk8s_nic.private_ip_list.0}"
+
+  depends_on = [null_resource.wait_microk8s_vm]
+  #  depends_on = [null_resource.clean_known_hosts]
+}
+
+resource "juju_application" "microk8s" {
+  name = "microk8s"
+  model = var.model_name
+  charm {
+    name = "microk8s"
+    channel = var.microk8s_charm_channel
+  }
+  units = 1
+  placement = "${juju_machine.microk8s_vm.machine_id}"
+
+  config = {
+    hostpath_storage = true
+  }
+
+  depends_on = [juju_machine.microk8s_vm]
+}
+
+resource "null_resource" "juju_wait_microk8s_app" {
+  provisioner "local-exec" {
+    command = "juju-wait --model ${var.model_name}"
+  }
+  depends_on = [juju_application.microk8s]
 
 }
 
-
-
-resource "null_resource" "prepare_microk8s_cloud" {
+resource "null_resource" "save_kubeconfig" {
 
   # Finally, load the new microk8s as another cloud in juju
   provisioner "local-exec" {
-    command = <<EOT
-    juju ssh --model ${var.model_name} microk8s/0 sudo microk8s config > ${var.cos_microk8s_kubeconfig}
-    kubectl config --kubeconfig ${var.cos_microk8s_kubeconfig} view --raw | juju add-k8s --client --controller ${var.microk8s_cloud_name}
+    command = "ssh -i ${var.private_key_path} -o StrictHostKeyChecking=no ubuntu@${aws_network_interface.microk8s_nic.private_ip_list.0} 'sudo microk8s config' > ${pathexpand(var.cos_microk8s_kubeconfig)}"
+    interpreter = ["/bin/bash", "-c"]
+  }
+  depends_on = [null_resource.juju_wait_microk8s_app]
+}
+
+resource "null_resource" "prepare_microk8s_cloud" {
+
+  provisioner "local-exec" {
+    command = "kubectl config --kubeconfig ${var.cos_microk8s_kubeconfig} view --raw | juju add-k8s ${var.microk8s_cloud_name} --client --controller ${var.controller_name}"
+    interpreter = ["/bin/bash", "-c"]
+  }
+  depends_on = [null_resource.save_kubeconfig]
+}
+
+resource "juju_model" "metallb_model" {
+  name = var.metallb_model_name
+
+  cloud {
+    name   = var.microk8s_cloud_name
+  }
+  # juju add-k8s adds kubeconfig as credentials with the same name as the cloud
+  credential = var.microk8s_cloud_name
+
+  depends_on = [null_resource.prepare_microk8s_cloud]
+
+  # TODO: remove this workaround :)
+  # We need a place to remove the credentials from microk8s cluster once we start the destroy process
+  # This is the first model to be created and the only place where we keep the microk8s_cloud_name as a variable
+  # in the "self" object.
+  provisioner "local-exec" {
+    when = destroy
+    command = <<-EOT
+    juju remove-cloud ${self.cloud.name} --client;
+    juju remove-credential ${self.cloud.name} ${self.cloud.name} --client
     EOT
   }
 
-  depends_on = [null_resource.deploy_microk8s]
 }
 
+resource "juju_model" "cos_model" {
+  name = var.cos_model_name
+
+  cloud {
+    name       = var.microk8s_cloud_name
+  }
+  # juju add-k8s adds kubeconfig as credentials with the same name as the cloud
+  credential = var.microk8s_cloud_name
+
+  depends_on = [null_resource.prepare_microk8s_cloud]
+}
 
 locals {
   last_ip_value = element(aws_network_interface.microk8s_nic.private_ip_list, length(aws_network_interface.microk8s_nic.private_ip_list)-1)
 }
 
-resource "null_resource" "deploy_metallb" {
+resource "juju_application" "metallb" {
 
-  # Add the model
-  provisioner "local-exec" {
-    command = "juju add-model ${var.metallb_model_name} ${var.microk8s_cloud_name}"
+  model = var.metallb_model_name
+  charm {
+    name = "metallb"
+    channel = var.metallb_channel_name
   }
-
-  provisioner "local-exec" {
-    command = "juju deploy metallb --channel=${var.metallb_channel_name} --model ${var.metallb_model_name} --config iprange=${aws_network_interface.microk8s_nic.private_ip_list.1}-${local.last_ip_value}"
+  units = 1
+  config = {
+    iprange = "${aws_network_interface.microk8s_nic.private_ip_list.1}-${local.last_ip_value}"
   }
+  depends_on = [juju_model.metallb_model]
 
+}
+
+resource "null_resource" "juju_wait_metallb_app" {
   provisioner "local-exec" {
     command = "juju-wait --model ${var.metallb_model_name}"
   }
-/*
-  provisioner "local-exec" {
-    when = destroy
-    command = "juju destroy-model --force --no-wait --destroy-storage ${var.metallb_model_name}"
-  }
-*/
-  depends_on = [null_resource.deploy_microk8s]
+
+  depends_on = [juju_application.metallb]
 }
 
-
-
-resource "null_resource" "deploy_cos" {
-
-  # Add the model
+# Unfortunately, deploying entire bundles with overlay is not yet available
+resource "null_resource" "deploy_cos_bundle" {
   provisioner "local-exec" {
-    command = "juju add-model ${var.cos_model_name} ${var.microk8s_cloud_name}"
+    command = <<-EOT
+    juju deploy ${var.cos_microk8s_bundle} --model ${var.cos_model_name} --overlay ${var.cos_microk8s_overlay} --trust;
+    juju-wait --model ${var.cos_model_name}
+    EOT
   }
 
-  provisioner "local-exec" {
-    command = "juju deploy ${var.cos_microk8s_bundle} --model ${var.cos_model_name} --overlay ${var.cos_microk8s_overlay} --trust"
-  }
-
-  provisioner "local-exec" {
-    command = "juju-wait --model ${var.cos_model_name}"
-  }
-
-/*
-  provisioner "local-exec" {
-    when = destroy
-    command = "juju destroy-model --force --no-wait --destroy-storage ${var.cos_model_name}"
-  }
-*/
-
-  depends_on = [null_resource.deploy_metallb]
+  depends_on = [null_resource.juju_wait_metallb_app]
 }

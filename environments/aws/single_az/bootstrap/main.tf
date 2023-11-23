@@ -9,6 +9,10 @@ terraform {
       source = "hashicorp/null"
       version = "3.2.1"
     }
+    external = {
+      source = "hashicorp/external"
+      version = ">=2.3.2"
+    }
   }
 }
 
@@ -24,8 +28,8 @@ locals {
       }
     }
   }
-  controllers_map = yamldecode(file(data.local_file.controller_info.filename))["controllers"]
-  accounts_map    = yamldecode(file(data.local_file.account_info.filename))["controllers"]
+  # controllers_map = yamldecode(file(data.local_file.controller_info.filename))["controllers"]
+  # accounts_map    = yamldecode(file(data.local_file.account_info.filename))["controllers"]
 }
 
 resource "local_sensitive_file" "generate_creds_yaml" {
@@ -64,30 +68,31 @@ resource "null_resource" "bootstrap" {
 
   # Remove the fan-networking from model-config by setting container-networking-method=local
   provisioner "local-exec" {
-    command = "juju bootstrap aws ${var.controller_name} --credential aws_tf_creds --model-default vpc-id=${var.vpc_id} --model-default vpc-id-force=true --model-default container-networking-method=local --config vpc-id=${var.vpc_id} --config vpc-id-force=true --config container-networking-method=local --constraints 'instance-type=${var.constraints.instance_type} root-disk=${var.constraints.root_disk_size}' --to subnet=${var.private_cidr}"
+    command = "juju bootstrap aws ${var.controller_name} --credential aws_tf_creds --model-default container-networking-method=local --config vpc-id=${var.vpc_id} --config vpc-id-force=true --config container-networking-method=local --constraints 'instance-type=${var.constraints.instance_type} root-disk=${var.constraints.root_disk_size}' --to subnet=${var.private_cidr}"    
   }
 
   provisioner "local-exec" {
     when = destroy
-    command = "juju destroy-controller --no-prompt --destroy-storage --destroy-all-models --force --no-wait ${self.triggers.controller_name} --model-timeout=1800s"
-  }
-
-  provisioner "local-exec" {
-    when = destroy
-    command = "juju remove-credential aws aws_tf_creds --client"
+    command = <<-EOT
+    juju destroy-controller --no-prompt --destroy-storage --destroy-all-models --force --no-wait ${self.triggers.controller_name} --model-timeout=1800s;
+    juju remove-credential aws aws_tf_creds --client
+    EOT
   }
 
   depends_on = [null_resource.remove_creds_file]
 }
 
-data "local_file" "controller_info" {
-  filename = pathexpand("~/.local/share/juju/controllers.yaml")
-
+resource "local_file" "controller_info" {
+  filename = pathexpand("/tmp/juju_show_controller.sh")
+  content = <<-EOT
+  #!/bin/bash
+  jq -n --arg ctl "$(juju show-controller --show-password)" '{"output": $ctl}'
+  EOT
+  file_permission = "0700"
   depends_on = [null_resource.bootstrap]
 }
 
-data "local_file" "account_info" {
-  filename = pathexpand("~/.local/share/juju/accounts.yaml")
-
-  depends_on = [null_resource.bootstrap]
+data "external" "juju_controller_info" {
+  program = ["bash", local_file.controller_info.filename]
+  depends_on = [local_file.controller_info]
 }

@@ -27,6 +27,11 @@ output "private_key_file" {
   value     = local_sensitive_file.generated_key_path.filename
 }
 
+output "public_key_file" {
+  value     = local_sensitive_file.generated_public_key_path.filename
+
+}
+
 output "key_name" {
   value     = aws_key_pair.generated_key.key_name
 }
