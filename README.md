@@ -39,6 +39,10 @@ The deployment is divided between `environments`, which contain the setup of a g
 |     +--- cos/            Configures the COS environment for any of the following deployments, including the microk8s underneath it
 |
 +--- scenarios/            Configures the different deployment scenarios and testing. Should be used once a model has been correctly added and configured
+|
++--- examples/             Examples of complete terraform scripts that use modules from environment and scenarios for a deployment
+|
++--- utils/                Additional scripts, such as sshuttle setup.
 ```
 
 Start with the chosen `environments` when writing your terraform module. Optionally, use the `examples` folder to kickstart your code.
@@ -46,6 +50,26 @@ Start with the chosen `environments` when writing your terraform module. Optiona
 # Deploying
 
 Choose the `environment` and `scenario` of interest and start the deployment with a new terraform module.
+
+First, make sure you bootstrap your deployment environment. Each environment folder has a `setup/`, which contains the module to bootstrap that given setup.
+
+Once the basic environment is created and, optionally, a jumphost to the internal network is set: bootstrap juju controller. Both setup and juju bootstrap can happen at the same time.
+
+Then, run the reminder of the deployment.
+
+If you have one single terraform script, it is advised to run something such as:
+```
+terraform apply -target module.<juju_bootstrap_instance>
+terraform apply
+```
+
+That will spin the entire environment.
+
+## Interacting with the environment
+
+The example provided contains a sshuttle routine: it will setup a sshuttle daemon that will give access to the internal AWS VPC.
+
+Use the sshuttle script in `utils/` if you want to jump over a jumphost to your environment.
 
 # Adding a new scenario
 
@@ -59,6 +83,8 @@ Also, leave standard meta-arguments in the bundle as it will be used as a templa
 
 # TODOs
 
+* Sshuttle should check if sudo is enabled without password, fail otherwise
 * Move the examples underneath `environments` to the main folder of the repo
++ terraform destroy takes a very long time to destroy the actual VPC; after everything else has been cleaned
 * We need a way to manage the `tfstate` folder: it is important to remember that the state will contain sensitive information such as cloud access keys
 * Ideally, use TF_ARG instead of passing secrets via CLI
