@@ -12,15 +12,6 @@ terraform {
   }
 }
 
-/*
-provider "juju" {
-  controller_addresses = var.controller_info.api_endpoints
-  username = var.controller_info.username
-  password = var.controller_info.password
-  ca_certificate = var.controller_info.ca_cert
-}
-*/
-
 resource "juju_model" "new_model" {
   name = var.name
 
@@ -37,21 +28,14 @@ resource "juju_model" "new_model" {
     vpc-id-force                = true
     update-status-hook-interval = "1m"
   }
+
+  provisioner "local-exec" {
+    when = destroy
+    command = <<-EOT
+    juju destroy-model --force --no-wait --no-prompt --destroy-storage ${self.name}
+    EOT
+  }
 }
-
-/*
-data "local_file" "pub_key" {
-  filename = pathexpand("~/.ssh/id_rsa.pub")
-}
-
-resource "juju_ssh_key" "add_key" {
-  model   = var.name
-  payload = data.local_file.pub_key.content
-
-  depends_on = [resource.juju_model.new_model]
-
-}
-*/
 
 resource "terraform_data" "add_space" {
   for_each = {
@@ -63,6 +47,5 @@ resource "terraform_data" "add_space" {
     command = "juju add-space --model ${var.name} ${each.key} ${join(" ", each.value.subnets)}"
   }
 
-  # depends_on = [resource.juju_ssh_key.add_key]
   depends_on = [resource.juju_model.new_model]
 }

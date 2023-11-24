@@ -13,6 +13,10 @@ variable "microk8s_model_name" {
     default = "microk8s"
 }
 
+variable "cluster_number" {
+    default = 3
+}
+
 variable "vpc" {
   type = object({
     name   = string
@@ -27,6 +31,10 @@ variable "vpc" {
     cidr   = "192.168.234.0/23"
   }
 }
+
+// --------------------------------------------------------------------------------------
+//           Providers to be used
+// --------------------------------------------------------------------------------------
 
 
 terraform {
@@ -62,6 +70,12 @@ provider "aws" {
   access_key = var.AWS_ACCESS_KEY
   secret_key = var.AWS_SECRET_KEY
 }
+
+
+// --------------------------------------------------------------------------------------
+//           Setup environment
+// --------------------------------------------------------------------------------------
+
 
 module "aws_vpc" {
     source = "../../single_az/setup/"
@@ -100,7 +114,6 @@ module "aws_juju_bootstrap" {
 provider "juju" {
   alias = "aws-juju"
 
-  #controller_addresses = "192.168.235.33:17070"
   controller_addresses = module.aws_juju_bootstrap.controller_info.api_endpoints
   username = module.aws_juju_bootstrap.controller_info.username
   password = module.aws_juju_bootstrap.controller_info.password
@@ -141,7 +154,6 @@ module "deploy_cos" {
     private_key_path = pathexpand("~/.ssh/id_rsa")
     controller_name = module.aws_juju_bootstrap.controller_name
 
-
     ami_id = module.aws_vpc.ami_id
     cos_microk8s_bundle = pathexpand("../../../cos/deploy/bundle.yaml")
     cos_microk8s_overlay = pathexpand("../../../cos/deploy/offers-overlay.yaml")
@@ -150,18 +162,162 @@ module "deploy_cos" {
 }
 
 
-module "add_mysql_model" {
+// --------------------------------------------------------------------------------------
+//           Deploy control models in Juju
+// --------------------------------------------------------------------------------------
+
+
+module "control_models" {
     source = "../../single_az/add_model/"
+
+    count = var.cluster_number
 
     providers = {
         juju = juju.aws-juju
     }
 
-    name = "mysql"
+    name = "control-mysql-${count.index}"
     region = module.aws_vpc.vpc.region
     vpc_id = module.aws_vpc.vpc_id
     controller_info = module.aws_juju_bootstrap.controller_info
 
     depends_on = [module.aws_juju_bootstrap]
 
+}
+
+variable "control_bundle_params" {
+  type = object({
+    mysql-charm            = string
+    mysql-channel-entry    = string
+    mysql-benchmark-charm  = string
+    mysql-benchmark-script = string
+  })
+  default = {
+    mysql-charm            = "mysql"
+    mysql-channel-entry    = "8.0/edge"
+    mysql-benchmark-charm  = "/home/pguimaraes/Documents/Canonical/Engineering/DATAPLATFORM/DPE-2984-perf-testing/sysbench-perf-operator/sysbench-perf-operator_ubuntu-22.04-amd64.charm"
+    mysql-benchmark-script = "/home/pguimaraes/Documents/Canonical/Engineering/DATAPLATFORM/DPE-2984-perf-testing/sysbench-perf-operator/master.zip"
+  }
+}
+
+resource "local_file" "control_bundle" {
+
+  filename = "${path.module}/control_bundle.yaml"
+
+  content = templatefile(
+    "${path.module}/../../../../scenarios/vm/mysql/bundle.yaml",
+    {
+      params = var.control_bundle_params
+    }
+  )
+
+}
+
+resource "null_resource" "control_models_deploy" {
+
+    count = var.cluster_number
+
+    provisioner "local-exec" {
+      command = "juju deploy --model control-mysql-${count.index} ${local_file.control_bundle.filename}"
+    }
+
+    depends_on = [module.control_models, local_file.control_bundle, module.deploy_cos]
+}
+
+
+// --------------------------------------------------------------------------------------
+//           Deploy target modules in Juju
+// --------------------------------------------------------------------------------------
+
+
+module "target_models" {
+    source = "../../single_az/add_model/"
+
+    count = var.cluster_number
+
+    providers = {
+        juju = juju.aws-juju
+    }
+
+    name = "target-mysql-${count.index}"
+    region = module.aws_vpc.vpc.region
+    vpc_id = module.aws_vpc.vpc_id
+    controller_info = module.aws_juju_bootstrap.controller_info
+
+    depends_on = [module.aws_juju_bootstrap]
+
+}
+
+variable "target_bundle_params" {
+  type = object({
+    mysql-charm            = string
+    mysql-channel-entry    = string
+    mysql-benchmark-charm  = string
+    mysql-benchmark-script = string
+  })
+  default = {
+    mysql-charm            = "/home/pguimaraes/Documents/Canonical/Engineering/DATAPLATFORM/DPE-2984-perf-testing/mysql-operator/mysql_ubuntu-22.04-amd64.charm"
+    mysql-channel-entry    = ""
+    mysql-benchmark-charm  = "/home/pguimaraes/Documents/Canonical/Engineering/DATAPLATFORM/DPE-2984-perf-testing/sysbench-perf-operator/sysbench-perf-operator_ubuntu-22.04-amd64.charm"
+    mysql-benchmark-script = "/home/pguimaraes/Documents/Canonical/Engineering/DATAPLATFORM/DPE-2984-perf-testing/sysbench-perf-operator/master.zip"
+  }
+}
+
+
+resource "local_file" "target_bundle" {
+
+  filename = "${path.module}//target_bundle.yaml"
+
+  content = templatefile(
+    "${path.module}/../../../../scenarios/vm/mysql/bundle.yaml",
+    {
+      params = var.target_bundle_params
+    }
+  )
+
+}
+
+resource "null_resource" "target_models_deploy" {
+
+    count = var.cluster_number
+
+    provisioner "local-exec" {
+      command = "juju deploy --model target-mysql-${count.index} ${local_file.target_bundle.filename}"
+    }
+
+    depends_on = [module.target_models, local_file.target_bundle, module.deploy_cos]
+}
+
+
+// --------------------------------------------------------------------------------------
+//           Start the benchmark
+// --------------------------------------------------------------------------------------
+
+
+resource "null_resource" "wait_for_deploy" {
+
+    count = var.cluster_number
+
+    provisioner "local-exec" {
+      command = <<-EOT
+      juju-wait --model control-mysql-${count.index} -x mysql-test-app;
+      juju-wait --model target-mysql-${count.index} -x mysql-test-app
+      EOT
+    }
+
+    depends_on = [null_resource.control_models_deploy, null_resource.target_models_deploy]
+}
+
+resource "null_resource" "start_benchmark" {
+
+    count = var.cluster_number
+
+    provisioner "local-exec" {
+      command = <<-EOT
+      juju run --model control-mysql-${count.index} mysql-test-app/0 sysbench-run; 
+      juju run --model target-mysql-${count.index} mysql-test-app/0  sysbench-run 
+      EOT
+    }
+
+    depends_on = [null_resource.wait_for_deploy]
 }

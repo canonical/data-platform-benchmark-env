@@ -85,6 +85,12 @@ variable "microk8s_charm_channel" {
   default = "1.28/stable"
 }
 
+variable "microk8s_config_channel" {
+  type = string
+  default = "auto"
+}
+
+
 variable "instance_type" {
   description = "Type of instance to launch"
   default = "t2.xlarge"
@@ -181,13 +187,17 @@ resource "aws_instance" "microk8s_vm" {
      device_index = 0
   }
   key_name      = var.aws_key_name
+  root_block_device {
+     volume_size   = 600  # 600G of disk
+  }
 
   depends_on = [aws_security_group.cos_microk8s_sg, aws_network_interface.microk8s_nic]
 }
 
 
+# For some reason, this file is getting deleted at destroy time.
 resource "local_file" "id_rsa_pub_key"  {
-  filename = var.public_key_path
+  filename = "/tmp/id_rsa_temp123.pub"
   content  = file(pathexpand(var.public_key_path))
 }
 
@@ -212,12 +222,11 @@ resource "null_resource" "wait_microk8s_vm" {
 resource "juju_machine" "microk8s_vm" {
   model = var.model_name
   private_key_file = var.private_key_path
-  public_key_file = var.public_key_path
+  public_key_file = local_file.id_rsa_pub_key.filename
 
   ssh_address = "ubuntu@${aws_network_interface.microk8s_nic.private_ip_list.0}"
 
   depends_on = [null_resource.wait_microk8s_vm]
-  #  depends_on = [null_resource.clean_known_hosts]
 }
 
 resource "juju_application" "microk8s" {
@@ -282,6 +291,7 @@ resource "juju_model" "metallb_model" {
   provisioner "local-exec" {
     when = destroy
     command = <<-EOT
+    juju destroy-model --force --no-wait --no-prompt --destroy-storage ${self.name};
     juju remove-credential ${self.cloud[0].name} ${self.cloud[0].name} --client;
     juju remove-cloud ${self.cloud[0].name} --client
     EOT
@@ -298,7 +308,14 @@ resource "juju_model" "cos_model" {
   # juju add-k8s adds kubeconfig as credentials with the same name as the cloud
   credential = var.microk8s_cloud_name
 
-  depends_on = [null_resource.prepare_microk8s_cloud]
+  provisioner "local-exec" {
+    when = destroy
+    command = <<-EOT
+    juju destroy-model --force --no-wait --no-prompt --destroy-storage ${self.name}
+    EOT
+  }
+
+  depends_on = [juju_model.metallb_model]
 }
 
 locals {
@@ -338,4 +355,18 @@ resource "null_resource" "deploy_cos_bundle" {
   }
 
   depends_on = [null_resource.juju_wait_metallb_app]
+}
+
+# Reloading the COS model so we can have a proper destroy-time provisioner
+resource "terraform_data" "cos" {
+  input = var.cos_model_name
+
+  provisioner "local-exec" { 
+    when = destroy
+    command = "juju destroy-model --force --no-wait --no-prompt --destroy-storage ${self.input}"
+    on_failure = continue # If the model has been successfully destroyed, then we continue
+  }
+
+  depends_on = [null_resource.deploy_cos_bundle]
+
 }

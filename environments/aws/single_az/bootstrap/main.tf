@@ -28,8 +28,6 @@ locals {
       }
     }
   }
-  # controllers_map = yamldecode(file(data.local_file.controller_info.filename))["controllers"]
-  # accounts_map    = yamldecode(file(data.local_file.account_info.filename))["controllers"]
 }
 
 resource "local_sensitive_file" "generate_creds_yaml" {
@@ -74,7 +72,7 @@ resource "null_resource" "bootstrap" {
   provisioner "local-exec" {
     when = destroy
     command = <<-EOT
-    juju destroy-controller --no-prompt --destroy-storage --destroy-all-models --force --no-wait ${self.triggers.controller_name} --model-timeout=1800s;
+    juju destroy-controller --no-prompt --destroy-storage --destroy-all-models --force --no-wait ${self.triggers.controller_name} --model-timeout=1200s;
     juju remove-credential aws aws_tf_creds --client
     EOT
   }
