@@ -8,6 +8,10 @@ variable "AWS_SECRET_KEY" {
     sensitive = true
 }
 
+variable "tpcc_script_zip_path" {
+    type = string
+}
+
 variable "microk8s_model_name" {
     type = string
     default = "microk8s"
@@ -195,8 +199,8 @@ variable "control_bundle_params" {
   default = {
     mysql-charm            = "mysql"
     mysql-channel-entry    = "8.0/edge"
-    mysql-benchmark-charm  = "/home/pguimaraes/Documents/Canonical/Engineering/DATAPLATFORM/DPE-2984-perf-testing/sysbench-perf-operator/sysbench-perf-operator_ubuntu-22.04-amd64.charm"
-    mysql-benchmark-script = "/home/pguimaraes/Documents/Canonical/Engineering/DATAPLATFORM/DPE-2984-perf-testing/sysbench-perf-operator/master.zip"
+    mysql-benchmark-charm  = "mysql"
+    mysql-benchmark-script = var.tpcc_script_zip_path
   }
 }
 
@@ -256,10 +260,10 @@ variable "target_bundle_params" {
     mysql-benchmark-script = string
   })
   default = {
-    mysql-charm            = "/home/pguimaraes/Documents/Canonical/Engineering/DATAPLATFORM/DPE-2984-perf-testing/mysql-operator/mysql_ubuntu-22.04-amd64.charm"
-    mysql-channel-entry    = ""
-    mysql-benchmark-charm  = "/home/pguimaraes/Documents/Canonical/Engineering/DATAPLATFORM/DPE-2984-perf-testing/sysbench-perf-operator/sysbench-perf-operator_ubuntu-22.04-amd64.charm"
-    mysql-benchmark-script = "/home/pguimaraes/Documents/Canonical/Engineering/DATAPLATFORM/DPE-2984-perf-testing/sysbench-perf-operator/master.zip"
+    mysql-charm            = "mysql"
+    mysql-channel-entry    = "8.0/edge"
+    mysql-benchmark-charm  = ""
+    mysql-benchmark-script = var.tpcc_script_zip_path
   }
 }
 

@@ -1,6 +1,0 @@
-applications:
-  mysql:
-    offers:
-      mysql-database:
-        endpoints:
-          - database

@@ -271,6 +271,7 @@ resource "null_resource" "prepare_microk8s_cloud" {
     interpreter = ["/bin/bash", "-c"]
   }
   depends_on = [null_resource.save_kubeconfig]
+
 }
 
 resource "juju_model" "metallb_model" {
@@ -291,11 +292,11 @@ resource "juju_model" "metallb_model" {
   provisioner "local-exec" {
     when = destroy
     command = <<-EOT
-    juju destroy-model --force --no-wait --no-prompt --destroy-storage ${self.name};
     juju remove-credential ${self.cloud[0].name} ${self.cloud[0].name} --client;
     juju remove-cloud ${self.cloud[0].name} --client
     EOT
   }
+#    juju destroy-model --force --no-wait --no-prompt --destroy-storage ${self.name};
 
 }
 
@@ -308,12 +309,12 @@ resource "juju_model" "cos_model" {
   # juju add-k8s adds kubeconfig as credentials with the same name as the cloud
   credential = var.microk8s_cloud_name
 
-  provisioner "local-exec" {
-    when = destroy
-    command = <<-EOT
-    juju destroy-model --force --no-wait --no-prompt --destroy-storage ${self.name}
-    EOT
-  }
+#  provisioner "local-exec" {
+#    when = destroy
+#    command = <<-EOT
+#    juju destroy-model --force --no-wait --no-prompt --destroy-storage ${self.name}
+#    EOT
+#  }
 
   depends_on = [juju_model.metallb_model]
 }

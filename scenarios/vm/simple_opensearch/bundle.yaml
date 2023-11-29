@@ -11,26 +11,28 @@ saas:
     url: admin/cos.prometheus-receive-remote-write
 
 applications:
-  mysql:
-    charm: ${params.mysql-charm}
-    %{ if params.mysql-channel-entry != "" }
-    channel: ${params.mysql-channel-entry}
+  opensearch:
+    charm: ${params.opensearch-charm}
+    %{ if params.opensearch-channel-entry != "" }
+    channel: ${params.opensearch-channel-entry}
     %{ endif }
     constraints: instance-type=c6a.2xlarge root-disk=100G spaces=internal-space
-    num_units: 3
-    bindings:
-      "": internal-space
-    storage:
-      database: 400G
-
-  mysql-test-app:
-    charm: ${params.mysql-benchmark-charm}
-    constraints: instance-type=c6a.large root-disk=100G spaces=internal-space
-    resources:
-      script: ${params.mysql-benchmark-script}
+#    num_units: 3
     num_units: 1
     bindings:
       "": internal-space
+    storage:
+      opensearch-data: 400G
+
+  tls-certificates-operator:
+    charm: tls-certificates-operator
+    constraints: instance-type=t2.medium root-disk=100G spaces=internal-space
+    num_units: 1
+    bindings:
+      "": internal-space
+    options:
+      generate-self-signed-certificates: true
+      ca-common-name: "CN_CA"
 
   grafana-agent:
     charm: grafana-agent
@@ -38,13 +40,21 @@ applications:
     bindings:
       "": internal-space
 
+  sysconfig:
+    charm: sysconfig
+    channel: latest/stable
+    bindings:
+      "": internal-space
+    options:
+      sysctl: "{ vm.max_map_count: 262144, vm.swappiness: 0, net.ipv4.tcp_retries2: 5 }"
+
 relations:
-- - mysql-test-app:database
-  - mysql
-- - mysql-test-app
-  - grafana-agent
+- - opensearch
+  - tls-certificates-operator
+- - opensearch
+  - sysconfig
 - - grafana-agent
-  - mysql
+  - opensearch
 - - grafana-agent
   - grafana-dashboards
 - - grafana-agent

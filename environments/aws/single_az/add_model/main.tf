@@ -29,12 +29,12 @@ resource "juju_model" "new_model" {
     update-status-hook-interval = "1m"
   }
 
-  provisioner "local-exec" {
-    when = destroy
-    command = <<-EOT
-    juju destroy-model --force --no-wait --no-prompt --destroy-storage ${self.name}
-    EOT
-  }
+#  provisioner "local-exec" {
+#    when = destroy
+#    command = <<-EOT
+#    juju destroy-model --force --no-wait --no-prompt --destroy-storage ${self.name}
+#    EOT
+#  }
 }
 
 resource "terraform_data" "add_space" {
