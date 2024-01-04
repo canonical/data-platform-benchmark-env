@@ -189,20 +189,20 @@ module "control_models" {
 
 }
 
-variable "control_bundle_params" {
-  type = object({
-    mysql-charm            = string
-    mysql-channel-entry    = string
-    mysql-benchmark-charm  = string
-    mysql-benchmark-script = string
-  })
-  default = {
-    mysql-charm            = "mysql"
-    mysql-channel-entry    = "8.0/edge"
-    mysql-benchmark-charm  = "mysql"
-    mysql-benchmark-script = var.tpcc_script_zip_path
-  }
-}
+#variable "control_bundle_params" {
+#  type = object({
+#    mysql-charm            = string
+#    mysql-channel-entry    = string
+#    mysql-benchmark-charm  = string
+#    mysql-benchmark-script = string
+#  })
+#  default = {
+#    mysql-charm            = "mysql"
+#    mysql-channel-entry    = "8.0/edge"
+#    mysql-benchmark-charm  = "mysql"
+#    mysql-benchmark-script = "${var.tpcc_script_zip_path}"
+#  }
+#}
 
 resource "local_file" "control_bundle" {
 
@@ -211,7 +211,13 @@ resource "local_file" "control_bundle" {
   content = templatefile(
     "${path.module}/../../../../scenarios/vm/mysql/bundle.yaml",
     {
-      params = var.control_bundle_params
+      # params = var.control_bundle_params
+      params = {
+        mysql-charm            = "mysql"
+        mysql-channel-entry    = "8.0/edge"
+        mysql-benchmark-charm  = "mysql"
+        mysql-benchmark-script = var.tpcc_script_zip_path
+      }
     }
   )
 
@@ -252,20 +258,20 @@ module "target_models" {
 
 }
 
-variable "target_bundle_params" {
-  type = object({
-    mysql-charm            = string
-    mysql-channel-entry    = string
-    mysql-benchmark-charm  = string
-    mysql-benchmark-script = string
-  })
-  default = {
-    mysql-charm            = "mysql"
-    mysql-channel-entry    = "8.0/edge"
-    mysql-benchmark-charm  = ""
-    mysql-benchmark-script = var.tpcc_script_zip_path
-  }
-}
+#variable "target_bundle_params" {
+#  type = object({
+#    mysql-charm            = string
+#    mysql-channel-entry    = string
+#    mysql-benchmark-charm  = string
+#    mysql-benchmark-script = string
+#  })
+#  default = {
+#    mysql-charm            = "mysql"
+#    mysql-channel-entry    = "8.0/edge"
+#    mysql-benchmark-charm  = ""
+#    mysql-benchmark-script = var.tpcc_script_zip_path
+#  }
+#}
 
 
 resource "local_file" "target_bundle" {
@@ -275,7 +281,13 @@ resource "local_file" "target_bundle" {
   content = templatefile(
     "${path.module}/../../../../scenarios/vm/mysql/bundle.yaml",
     {
-      params = var.target_bundle_params
+      # params = var.target_bundle_params
+      params = {
+        mysql-charm            = "mysql"
+        mysql-channel-entry    = "8.0/edge"
+        mysql-benchmark-charm  = ""
+        mysql-benchmark-script = var.tpcc_script_zip_path
+      }
     }
   )
 

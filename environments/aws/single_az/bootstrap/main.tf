@@ -28,6 +28,7 @@ locals {
       }
     }
   }
+  juju_version = var.agent_version != "" ? " --agent-version=${var.agent_version}" : "" 
 }
 
 resource "local_sensitive_file" "generate_creds_yaml" {
@@ -66,7 +67,7 @@ resource "null_resource" "bootstrap" {
 
   # Remove the fan-networking from model-config by setting container-networking-method=local
   provisioner "local-exec" {
-    command = "juju bootstrap aws ${var.controller_name} --credential aws_tf_creds --model-default container-networking-method=local --config vpc-id=${var.vpc_id} --config vpc-id-force=true --config container-networking-method=local --constraints 'instance-type=${var.constraints.instance_type} root-disk=${var.constraints.root_disk_size}' --to subnet=${var.private_cidr}"    
+    command = "juju bootstrap aws ${var.controller_name} --credential aws_tf_creds --model-default container-networking-method=local --config vpc-id=${var.vpc_id} --config vpc-id-force=true --config container-networking-method=local --constraints 'instance-type=${var.constraints.instance_type} root-disk=${var.constraints.root_disk_size}' --to subnet=${var.private_cidr}${local.juju_version}"
   }
 
   provisioner "local-exec" {

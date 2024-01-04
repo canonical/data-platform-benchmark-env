@@ -17,8 +17,8 @@ applications:
     channel: ${params.opensearch-channel-entry}
     %{ endif }
     constraints: instance-type=c6a.2xlarge root-disk=100G spaces=internal-space
-#    num_units: 3
-    num_units: 1
+    num_units: 3
+#    num_units: 1
     bindings:
       "": internal-space
     storage:
@@ -53,8 +53,8 @@ relations:
   - tls-certificates-operator
 - - opensearch
   - sysconfig
-- - grafana-agent
-  - opensearch
+#- - grafana-agent
+#  - opensearch
 - - grafana-agent
   - grafana-dashboards
 - - grafana-agent

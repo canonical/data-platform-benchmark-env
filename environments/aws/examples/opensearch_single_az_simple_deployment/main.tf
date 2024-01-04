@@ -13,6 +13,16 @@ variable "microk8s_model_name" {
     default = "microk8s"
 }
 
+variable "opensearch_charm_channel" {
+    type = string
+    default = "2/edge"
+}
+
+variable "agent_version" {
+    type = string
+    default = ""
+}
+
 variable "vpc" {
   type = object({
     name   = string
@@ -103,6 +113,7 @@ module "aws_juju_bootstrap" {
     private_cidr = module.aws_vpc.private_cidr
     AWS_ACCESS_KEY = var.AWS_ACCESS_KEY
     AWS_SECRET_KEY = var.AWS_SECRET_KEY
+    agent_version = var.agent_version
 
     depends_on = [module.sshuttle]
 }
@@ -197,7 +208,10 @@ resource "local_file" "opensearch_bundle" {
   content = templatefile(
     "${path.module}/../../../../scenarios/vm/simple_opensearch/bundle.yaml",
     {
-      params = var.opensearch_bundle_params
+      params = {
+        opensearch-charm            = "opensearch"
+        opensearch-channel-entry    = var.opensearch_charm_channel
+      }
     }
   )
 

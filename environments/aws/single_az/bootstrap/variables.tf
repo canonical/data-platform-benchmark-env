@@ -36,3 +36,8 @@ variable "constraints" {
         root_disk_size = "100G"
     }
 }
+
+variable "agent_version" {
+    type = string
+    default = ""
+}
