@@ -1,0 +1,28 @@
+applications:
+  kubernetes-control-plane:
+    options:
+      allow-privileged: "true"
+  aws-integrator:
+    charm: aws-integrator
+    num_units: 1
+    trust: true
+    bindings:
+      "": internal-space
+  aws-cloud-provider:
+    charm: aws-cloud-provider
+  aws-k8s-storage:
+    charm: aws-k8s-storage
+    trust: true
+    options:
+      image-registry: public.ecr.aws
+
+relations:
+  - ["aws-integrator", "kubernetes-control-plane"]
+  - ["aws-integrator", "kubernetes-worker"]
+  - ["aws-cloud-provider:certificates",            "easyrsa"]
+  - ["aws-cloud-provider:kube-control",            "kubernetes-control-plane"]
+  - ["aws-cloud-provider:external-cloud-provider", "kubernetes-control-plane"]
+  - ["aws-cloud-provider:aws-integration",         "aws-integrator"]
+  - ['aws-k8s-storage:certificates', 'easyrsa:client']
+  - ['aws-k8s-storage:kube-control', 'kubernetes-control-plane:kube-control']
+  - ['aws-k8s-storage:aws-integration', 'aws-integrator:aws']

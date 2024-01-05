@@ -29,27 +29,27 @@ sudo snap install kubectl --channel=<TARGET-VERSION-FOR-K8S>/stable --classic
 
 ## Folder Structure
 
-The deployment is divided between `environments`, which contain the setup of a given cloud in certain conditions (e.g. AWS in a single AZ) and `scenarios`, which is composed of the different applications to be deployed following some reference decisions, such as running MySQL in HA.
+The deployment is divided between `cloud_providers`, which contain the setup of a given cloud in certain conditions (e.g. AWS in a single AZ) and `bundle_templates`, which is composed of the different applications to be deployed following some reference decisions, such as running MySQL in HA.
 
 ```
 +
 |
-+--- environments/         Configures the different VM clouds in Juju
++--- cloud_providers/      Configures the different VM clouds in Juju
 |     |
 |     +--- cos/            Configures the COS environment for any of the following deployments, including the microk8s underneath it
 |
-+--- scenarios/            Configures the different deployment scenarios and testing. Should be used once a model has been correctly added and configured
++--- bundle_templates/     Configures the different deployment scenarios and testing. Should be used once a model has been correctly added and configured
 |
 +--- examples/             Examples of complete terraform scripts that use modules from environment and scenarios for a deployment
 |
 +--- utils/                Additional scripts, such as sshuttle setup.
 ```
 
-Start with the chosen `environments` when writing your terraform module. Optionally, use the `examples` folder to kickstart your code.
+Start with the chosen `cloud_providers` when writing your terraform module. Optionally, use the `examples` folder to kickstart your code.
 
 # Deploying
 
-Choose the `environment` and `scenario` of interest and start the deployment with a new terraform module.
+Choose the `cloud_providers` and `bundle_templates` of interest and start the deployment with a new terraform module.
 
 First, make sure you bootstrap your deployment environment. Each environment folder has a `setup/`, which contains the module to bootstrap that given setup.
 
@@ -84,7 +84,8 @@ Also, leave standard meta-arguments in the bundle as it will be used as a templa
 # TODOs
 
 * Sshuttle should check if sudo is enabled without password, fail otherwise
-* Move the examples underneath `environments` to the main folder of the repo
-+ terraform destroy takes a very long time to destroy the actual VPC; after everything else has been cleaned
+* COS Microk8s VM demands a list of IPs that is consecutive. That is used for metallb
+  We need a way to validate that list of IPs
+  Ideally, we should not need to specify that list of IPs and get it done by the provider itself
 * We need a way to manage the `tfstate` folder: it is important to remember that the state will contain sensitive information such as cloud access keys
 * Ideally, use TF_ARG instead of passing secrets via CLI

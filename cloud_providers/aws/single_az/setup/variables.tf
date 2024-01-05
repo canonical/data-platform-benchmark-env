@@ -67,3 +67,8 @@ variable "key_name" {
   type    = string
   default = "test-ssh-key"
 }
+
+variable "microk8s_sg" {
+  type    = string
+  default = "microk8s_sg"
+}

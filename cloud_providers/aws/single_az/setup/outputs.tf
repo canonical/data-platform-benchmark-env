@@ -8,6 +8,11 @@ output "ami_id" {
   value = data.aws_ami.ubuntu.id
 }
 
+output "vpc_cidr" {
+  description = "VPC CIDR copied from variable to the next stage"
+  value = var.vpc.cidr
+}
+
 output "private_cidr" {
   description = "Private CIDR copied from variable to the next stage"
   value = var.private_cidr.cidr

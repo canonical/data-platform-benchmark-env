@@ -1,0 +1,112 @@
+series: jammy
+name: charmed-kubernetes
+
+%{ if params.grafana-dashboards || params.logging || params.prometheus-scrape || params.prometheus-receive-remote-write }
+saas:
+  %{ if params.grafana-dashboards }
+  grafana-dashboards:
+    url: admin/cos.grafana-dashboards
+  %{ endif }
+  %{ if params.logging }
+  logging:
+    url: admin/cos.loki-logging
+  %{ endif }
+  %{ if params.prometheus-scrape }
+  prometheus-scrape:
+    url: admin/cos.prometheus-scrape
+  %{ endif }
+  %{ if params.prometheus-receive-remote-write }
+  prometheus-receive-remote-write:
+    url: admin/cos.prometheus-receive-remote-write
+  %{ endif }
+%{ endif }
+
+applications:
+  calico:
+    channel: stable
+    charm: calico
+    options:
+      vxlan: Always
+    bindings:
+      "": internal-space
+  containerd:
+    channel: stable
+    charm: containerd
+    bindings:
+      "": internal-space
+  easyrsa:
+    channel: stable
+    charm: easyrsa
+    constraints: ${params.aux-constraints} 
+    num_units: 1
+    bindings:
+      "": internal-space
+  kubernetes-control-plane:
+    channel: stable
+    charm: kubernetes-control-plane
+    constraints: ${params.k8s-control-constraints}
+    num_units: 3
+    options:
+      channel: ${params.k8s-channel}
+    bindings:
+      "": internal-space
+  etcd:
+    channel: stable
+    charm: etcd
+    num_units: 3
+    options:
+      channel: ${params.etcd-channel}
+    to:
+    - kubernetes-control-plane/0
+    - kubernetes-control-plane/1
+    - kubernetes-control-plane/2
+    bindings:
+      "": internal-space
+  kubeapi-load-balancer:
+    channel: stable
+    charm: kubeapi-load-balancer
+    expose: true
+    num_units: 3
+    to:
+    - kubernetes-control-plane/0
+    - kubernetes-control-plane/1
+    - kubernetes-control-plane/2
+    bindings:
+      "": internal-space
+  kubernetes-worker:
+    channel: stable
+    charm: kubernetes-worker
+    constraints: ${params.k8s-worker-constraints}
+    expose: true
+    num_units: 3
+    options:
+      channel: ${params.k8s-channel}
+    bindings:
+      "": internal-space
+relations:
+- - kubernetes-control-plane:loadbalancer-external
+  - kubeapi-load-balancer:lb-consumers
+- - kubernetes-control-plane:loadbalancer-internal
+  - kubeapi-load-balancer:lb-consumers
+- - kubernetes-control-plane:kube-control
+  - kubernetes-worker:kube-control
+- - kubernetes-control-plane:certificates
+  - easyrsa:client
+- - etcd:certificates
+  - easyrsa:client
+- - kubernetes-control-plane:etcd
+  - etcd:db
+- - kubernetes-worker:certificates
+  - easyrsa:client
+- - kubeapi-load-balancer:certificates
+  - easyrsa:client
+- - calico:etcd
+  - etcd:db
+- - calico:cni
+  - kubernetes-control-plane:cni
+- - calico:cni
+  - kubernetes-worker:cni
+- - containerd:containerd
+  - kubernetes-worker:container-runtime
+- - containerd:containerd
+  - kubernetes-control-plane:container-runtime
