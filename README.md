@@ -4,7 +4,7 @@ This repo is a collection of terraform scripts to get an environment up from 0 o
 
 Ideally, you should start only with credentials for your Juju cloud and start deploying.
 
-*IMPORTANT* The target audience are people deploying testing environments, these modules will destroy everything at the end.
+*IMPORTANT* Intended for people deploying testing environments, these modules will change the entire environment you have and potentially destroy everything at the end!!
 
 The user starts by writing its own terraform module OR using one of the examples available.
 
@@ -35,8 +35,6 @@ The deployment is divided between `cloud_providers`, which contain the setup of 
 +
 |
 +--- cloud_providers/      Configures the different VM clouds in Juju
-|     |
-|     +--- cos/            Configures the COS environment for any of the following deployments, including the microk8s underneath it
 |
 +--- bundle_templates/     Configures the different deployment scenarios and testing. Should be used once a model has been correctly added and configured
 |
@@ -67,7 +65,7 @@ That will spin the entire environment.
 
 ## Interacting with the environment
 
-The example provided contains a sshuttle routine: it will setup a sshuttle daemon that will give access to the internal AWS VPC.
+The examples provided contains a sshuttle routine: it will setup a sshuttle daemon that will give access to the internal private network (e.g. private subnet in AWS VPC).
 
 Use the sshuttle script in `utils/` if you want to jump over a jumphost to your environment.
 
@@ -77,7 +75,7 @@ Use the sshuttle script in `utils/` if you want to jump over a jumphost to your 
 
 If you plan to bring your own bundle once the deployment is done, then consider the following spaces:
 * internal-space: subnets isolated within the tenant and accessible only via a jumphost.
-* ingress-space:  subnets in the public networks, where a Floating/Elastic/Public IP can be assigned to the VM and it becomes externally reachable.
+* public-space:  subnets in the public networks, where a Floating/Elastic/Public IP can be assigned to the VM and it becomes externally reachable. In `examples`, this is used to setup the jumphost to access the private subnets
 
 Also, leave standard meta-arguments in the bundle as it will be used as a template for the deployments.
 
