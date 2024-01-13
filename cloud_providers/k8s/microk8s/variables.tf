@@ -10,11 +10,11 @@ variable "hostpath_storage_enabled" {
 }
 
 variable "private_key_path" {
-  description = "Path to the SSH private key"
+  description = "Path to the SSH private key for Juju"
 }
 
 variable "public_key_path" {
-  description = "Path to the SSH private key"
+  description = "Path to the SSH private key for Juju"
 }
 
 variable "microk8s_charm_channel" {
