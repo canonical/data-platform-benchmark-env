@@ -15,6 +15,11 @@ variable "aws_key_name" {
   description = "Name of the SSH key pair to associate with the instance"
 }
 
+variable "aws_private_key_path" {
+  description = "Path to the AWS SSH private key"
+  type = string
+}
+
 variable "private_key_path" {
   description = "Path to the SSH private key"
 }

@@ -11,9 +11,9 @@ terraform {
 resource "null_resource" "validate_sudo_not_need_password" {
   provisioner "local-exec" {
     command = <<-EOT
-    if [ ! $(sudo -n true 2>/dev/null) ]; then 
-      echo "Sudo requires password!!! Please enter it before proceeding!";
-      exit 1;
+    sudo -n true 2>/dev/null;
+    if [ $? -ne 0 ]; then
+      echo "sshuttle demands SUDO: make sure the password has been entered";
     fi
     EOT    
   }

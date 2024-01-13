@@ -222,7 +222,8 @@ resource "null_resource" "wait_microk8s_vm" {
 resource "juju_machine" "microk8s_vm" {
   model = var.model_name
   private_key_file = var.private_key_path
-  public_key_file = local_file.id_rsa_pub_key.filename
+  public_key_file = var.public_key_path
+//  public_key_file = local_file.id_rsa_pub_key.filename
 
   ssh_address = "ubuntu@${aws_network_interface.microk8s_nic.private_ip_list.0}"
 

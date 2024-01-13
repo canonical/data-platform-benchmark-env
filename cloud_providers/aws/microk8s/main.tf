@@ -98,12 +98,12 @@ resource "null_resource" "wait_microk8s_vm" {
     ssh-keygen -R ${aws_network_interface.microk8s_nic.private_ip_list.0} || true;
     for i in {0..5}; do 
       sleep 60s;
-      ssh -i ${var.private_key_path} -o StrictHostKeyChecking=no ubuntu@${aws_network_interface.microk8s_nic.private_ip_list.0} exit;
+      ssh -i ${var.aws_private_key_path} -o StrictHostKeyChecking=no ubuntu@${aws_network_interface.microk8s_nic.private_ip_list.0} exit;
       if [[ $? -eq 0 ]]; then
         break;
       fi;
     done;
-    ssh -i ${var.private_key_path} -o StrictHostKeyChecking=no ubuntu@${aws_network_interface.microk8s_nic.private_ip_list.0} "echo '${local_file.id_rsa_pub_key.content}' >> ~/.ssh/authorized_keys"
+    ssh -i ${var.aws_private_key_path} -o StrictHostKeyChecking=no ubuntu@${aws_network_interface.microk8s_nic.private_ip_list.0} "echo '${local_file.id_rsa_pub_key.content}' >> ~/.ssh/authorized_keys"
     EOT
     interpreter = ["/bin/bash", "-c"]
   }

@@ -41,18 +41,6 @@ variable "number_of_clusters" {
   default = 2
 }
 
-/*
-variable "microk8s_ips_1" {
-  type = list(string)
-  default = ["192.168.235.201", "192.168.235.202", "192.168.235.203"]
-}
-
-variable "microk8s_ips_2" {
-  type = list(string)
-  default = ["192.168.235.205", "192.168.235.206", "192.168.235.207"]
-}
-*/
-
 // --------------------------------------------------------------------------------------
 //           Providers to be used
 // --------------------------------------------------------------------------------------
@@ -159,8 +147,9 @@ module "create_microk8s_vm" {
     private_subnet_id = module.aws_vpc.private_subnet_id
     security_group_name = "microk8s-${count.index}"
     aws_key_name = module.aws_vpc.key_name
-    private_key_path = module.aws_vpc.private_key_file
-    public_key_path = module.aws_vpc.public_key_file
+    aws_private_key_path = module.aws_vpc.private_key_file
+    public_key_path = pathexpand("~/.ssh/id_rsa.pub")
+    private_key_path = pathexpand("~/.ssh/id_rsa")
     ami_id = module.aws_vpc.ami_id
     vpc_cidr = module.aws_vpc.vpc.cidr
     microk8s_ips = element(var.microk8s_ips, count.index)
@@ -205,101 +194,3 @@ module "deploy_microk8s" {
     depends_on = [module.microk8s_models]
 
 }
-
-/*
-module "create_microk8s_vm_1" {
-    source = "../../cloud_providers/aws/microk8s/"
-
-    providers = {
-        aws = aws.us-east1
-    }
-
-    vpc_id = module.aws_vpc.vpc_id
-    private_subnet_id = module.aws_vpc.private_subnet_id
-    security_group_name = "microk8s-1"
-    aws_key_name = module.aws_vpc.key_name
-    private_key_path = module.aws_vpc.private_key_file
-    public_key_path = module.aws_vpc.public_key_file
-    ami_id = module.aws_vpc.ami_id
-    vpc_cidr = module.aws_vpc.vpc.cidr
-    microk8s_ips = var.microk8s_ips_1
-
-    depends_on = [module.sshuttle]
-
-}
-
-module "create_microk8s_vm_2" {
-    source = "../../cloud_providers/aws/microk8s/"
-
-    providers = {
-        aws = aws.us-east1
-    }
-
-    vpc_id = module.aws_vpc.vpc_id
-    private_subnet_id = module.aws_vpc.private_subnet_id
-    security_group_name = "microk8s-2"
-    aws_key_name = module.aws_vpc.key_name
-    private_key_path = module.aws_vpc.private_key_file
-    public_key_path = module.aws_vpc.public_key_file
-    ami_id = module.aws_vpc.ami_id
-    vpc_cidr = module.aws_vpc.vpc.cidr
-    microk8s_ips = var.microk8s_ips_2
-
-    depends_on = [module.sshuttle]
-}
-
-module "control_models" {
-    source = "../../single_az/add_model/"
-
-    count = var.cluster_number
-
-    providers = {
-        juju = juju.aws-juju
-    }
-
-    name = "control-mysql-${count.index}"
-    region = module.aws_vpc.vpc.region
-    vpc_id = module.aws_vpc.vpc_id
-    controller_info = module.aws_juju_bootstrap.controller_info
-
-    depends_on = [module.aws_juju_bootstrap]
-
-}
-
-module "deploy_microk8s_1" {
-    source = "../../cloud_providers/k8s/microk8s/"
-
-    providers = {
-        juju = juju.aws-juju
-    }
-
-    model_name = "microk8s-1"
-    private_key_path = module.aws_vpc.private_key_file
-    public_key_path = module.aws_vpc.public_key_file
-    microk8s_charm_channel = "1.28/stable"
-    vpc_cidr = module.aws_vpc.vpc.cidr
-    microk8s_ips = var.microk8s_ips_1
-    microk8s_kubeconfig = "~/.kube/mk8s_tf_config"
-
-    depends_on = [module.create_microk8s_vm_1]
-
-}
-
-module "deploy_microk8s_2" {
-    source = "../../cloud_providers/k8s/microk8s/"
-
-    providers = {
-        juju = juju.aws-juju
-    }
-
-    model_name = "microk8s-2"
-    private_key_path = module.aws_vpc.private_key_file
-    public_key_path = module.aws_vpc.public_key_file
-    microk8s_charm_channel = "1.28/stable"
-    vpc_cidr = module.aws_vpc.vpc.cidr
-    microk8s_ips = ["192.168.235.201", "192.168.235.202", "192.168.235.203"]
-    microk8s_kubeconfig = "~/.kube/mk8s_tf_config"
-
-    depends_on = [module.create_microk8s_vm_2]
-}
-*/
