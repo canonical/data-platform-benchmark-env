@@ -19,7 +19,7 @@ variable "public_key_path" {
 
 variable "microk8s_charm_channel" {
   type = string
-  default = "latest/stable"
+  default = "1.28/stable"
 }
 
 variable "microk8s_config_channel" {

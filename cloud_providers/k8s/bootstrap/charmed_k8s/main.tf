@@ -13,6 +13,10 @@ terraform {
       source = "hashicorp/external"
       version = ">=2.3.2"
     }
+    juju = {
+      source  = "juju/juju"
+      version = ">= 0.3.1"
+    }
   }
 }
 
@@ -105,23 +109,25 @@ variable k8s-channel {
 
 locals {
   cos_overlay = yamldecode(file(var.cos.overlay))
+  cos_overlay_keys = keys(local.cos_overlay["applications"])
+  cos_overlay_prom_offer_keys = keys(local.cos_overlay["applications"]["prometheus"]["offers"])
 }
 
 resource "local_file" "charmed_k8s_bundle" {
 
-  filename = "${path.module}/charmed_k8s.yaml"
+  filename = "${path.cwd}/charmed_k8s.yaml"
 
   content = templatefile(
-    "./charmed_k8s/bundle.yaml",
+    "${path.module}/bundle.yaml",
     {
       # params = var.control_bundle_params
       params = {
         ## COS offer model
         "cos_model" = var.cos.model_name
-        "grafana-dashboards" = contains(var.cos.overlay, "grafana")
-        "logging" = contains(var.cos.overlay, "logging")
-        "prometheus-scrape" = contains(var.cos.overlay, "prometheus")
-        "prometheus-receive-remote-write" = contains(var.cos.overlay, "prometheus")
+        "grafana_dashboards" = contains(local.cos_overlay_keys, "grafana")
+        "logging" = contains(local.cos_overlay_keys, "logging")
+        "prometheus-scrape" = contains(local.cos_overlay_prom_offer_keys, "prometheus-scrape")
+        "prometheus-receive-remote-write" = contains(local.cos_overlay_prom_offer_keys, "prometheus-receive-remote-write")
         ## bundle parameters
         "cni_cidr" = var.cni_cidr
         "service_cidr" = var.service_cidr

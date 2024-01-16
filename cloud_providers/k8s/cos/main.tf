@@ -13,6 +13,10 @@ terraform {
       source = "hashicorp/external"
       version = ">=2.3.2"
     }
+    juju = {
+      source  = "juju/juju"
+      version = ">= 0.3.1"
+    }
   }
 }
 
@@ -52,4 +56,16 @@ resource "terraform_data" "cos" {
 
   depends_on = [null_resource.deploy_cos_bundle]
 
+}
+
+output "cos_model_name" {
+  value = "${var.cos_model_name}"
+}
+
+output "cos_bundle_filepath" {
+  value = "${var.cos_bundle}"
+}
+
+output "cos_overlay_filepath" {
+  value = "${var.cos_overlay}"
 }
