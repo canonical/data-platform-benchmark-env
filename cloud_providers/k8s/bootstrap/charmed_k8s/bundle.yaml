@@ -1,23 +1,23 @@
 series: jammy
 name: charmed-kubernetes
 
-%{ if params.grafana-dashboards || params.logging || params.prometheus-scrape || params.prometheus-receive-remote-write }
+%{ if params.cos_model && (params.grafana_dashboards || params.logging || params.prometheus-scrape || params.prometheus-receive-remote-write) }
 saas:
-  %{ if params.grafana-dashboards }
+  %{ if params.grafana_dashboards }
   grafana-dashboards:
-    url: admin/cos.grafana-dashboards
+    url: admin/${params.cos_model}.grafana-dashboards
   %{ endif }
   %{ if params.logging }
   logging:
-    url: admin/cos.loki-logging
+    url: admin/${params.cos_model}.loki-logging
   %{ endif }
   %{ if params.prometheus-scrape }
   prometheus-scrape:
-    url: admin/cos.prometheus-scrape
+    url: admin/${params.cos_model}.prometheus-scrape
   %{ endif }
   %{ if params.prometheus-receive-remote-write }
   prometheus-receive-remote-write:
-    url: admin/cos.prometheus-receive-remote-write
+    url: admin/${params.cos_model}.prometheus-receive-remote-write
   %{ endif }
 %{ endif }
 
@@ -27,6 +27,7 @@ applications:
     charm: calico
     options:
       vxlan: Always
+      cidr: ${params.cni_cidr}
     bindings:
       "": internal-space
   containerd:
@@ -45,32 +46,33 @@ applications:
     channel: stable
     charm: kubernetes-control-plane
     constraints: ${params.k8s-control-constraints}
-    num_units: 3
+    num_units: ${params.k8s-control-num-units}
     options:
+      service-cidr: ${params.service_cidr}
       channel: ${params.k8s-channel}
     bindings:
       "": internal-space
   etcd:
     channel: stable
     charm: etcd
-    num_units: 3
+    num_units: ${params.k8s-control-num-units}
     options:
       channel: ${params.etcd-channel}
     to:
-    - kubernetes-control-plane/0
-    - kubernetes-control-plane/1
-    - kubernetes-control-plane/2
+    %{ for i in range(0, params.k8s-control-num-units) }
+    - kubernetes-control-plane/${i}
+    %{ endfor }
     bindings:
       "": internal-space
   kubeapi-load-balancer:
     channel: stable
     charm: kubeapi-load-balancer
     expose: true
-    num_units: 3
+    num_units: ${params.k8s-control-num-units}
     to:
-    - kubernetes-control-plane/0
-    - kubernetes-control-plane/1
-    - kubernetes-control-plane/2
+    %{ for i in range(0, params.k8s-control-num-units) }
+    - kubernetes-control-plane/${i}
+    %{ endfor }
     bindings:
       "": internal-space
   kubernetes-worker:
@@ -78,7 +80,7 @@ applications:
     charm: kubernetes-worker
     constraints: ${params.k8s-worker-constraints}
     expose: true
-    num_units: 3
+    num_units: ${params.k8s-worker-num-units}
     options:
       channel: ${params.k8s-channel}
     bindings:
