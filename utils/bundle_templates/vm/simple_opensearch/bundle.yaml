@@ -53,8 +53,8 @@ relations:
   - tls-certificates-operator
 - - opensearch
   - sysconfig
-- - grafana-agent
-  - opensearch
+#- - grafana-agent
+#  - opensearch
 - - grafana-agent
   - grafana-dashboards
 - - grafana-agent

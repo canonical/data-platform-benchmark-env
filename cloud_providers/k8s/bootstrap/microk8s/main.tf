@@ -35,30 +35,47 @@ resource "juju_machine" "microk8s_vm" {
 
 }
 
-resource "juju_application" "microk8s" {
-  name = "microk8s"
-  model = var.model_name
-  charm {
-    name = "microk8s"
-    channel = var.microk8s_charm_channel
-  }
-  units = 1
-  placement = "${juju_machine.microk8s_vm.machine_id}"
 
-  config = {
-    hostpath_storage = var.hostpath_storage_enabled
-  }
+resource "null_resource" "deploy_microk8s_app" {
 
+  # Finally, load the new microk8s as another cloud in juju
+  provisioner "local-exec" {
+    command = "juju deploy microk8s --model=${var.model_name} --channel=${var.microk8s_charm_channel} --to=${juju_machine.microk8s_vm.machine_id} --config hostpath_storage=true"
+    interpreter = ["/bin/bash", "-c"]
+  }
   depends_on = [juju_machine.microk8s_vm]
 }
-
 resource "null_resource" "juju_wait_microk8s_app" {
   provisioner "local-exec" {
     command = "juju-wait --model ${var.model_name}"
   }
-  depends_on = [juju_application.microk8s]
-
+  depends_on = [null_resource.deploy_microk8s_app]
 }
+
+## Seems it is still affected by: https://bugs.launchpad.net/juju/+bug/2039179
+# resource "juju_application" "microk8s" {
+#   name = "microk8s"
+#   model = var.model_name
+#   charm {
+#     name = "microk8s"
+#     channel = var.microk8s_charm_channel
+#     base = juju_machine.microk8s_vm.base
+#   }
+#   units = 1
+#   placement = "${juju_machine.microk8s_vm.machine_id}"
+
+#   config = {
+#     hostpath_storage = var.hostpath_storage_enabled
+#   }
+
+#   depends_on = [juju_machine.microk8s_vm]
+# }
+# resource "null_resource" "juju_wait_microk8s_app" {
+#   provisioner "local-exec" {
+#     command = "juju-wait --model ${var.model_name}"
+#   }
+#   depends_on = [juju_application.microk8s]
+# }
 
 resource "null_resource" "save_kubeconfig" {
 
