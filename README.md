@@ -35,8 +35,11 @@ The deployment is divided between `cloud_providers`, which contain the setup of 
 +
 |
 +--- cloud_providers/      Configures the different VM clouds in Juju
+|     |
+|     +--- k8s/            This is a special cloud type: we can deploy (setup) or use add-k8s to add an existing k8s cluster
+|     +--- setup/          Folder containing the logic to create a new charmed-/microk8s: needs an existing env (another cloud) for that
 |
-+--- bundle_templates/     Configures the different deployment scenarios and testing. Should be used once a model has been correctly added and configured
++--- stacks/               Configures the different deployment scenarios and testing. Should be used once a model has been correctly added and configured
 |
 +--- examples/             Examples of complete terraform scripts that use modules from environment and scenarios for a deployment
 |
@@ -47,7 +50,7 @@ Start with the chosen `cloud_providers` when writing your terraform module. Opti
 
 # Deploying
 
-Choose the `cloud_providers` and `bundle_templates` of interest and start the deployment with a new terraform module.
+Choose the `cloud_providers` and `stacks` of interest and start the deployment with a new terraform module.
 
 First, make sure you bootstrap your deployment environment. Each environment folder has a `setup/`, which contains the module to bootstrap that given setup.
 
