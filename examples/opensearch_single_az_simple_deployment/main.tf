@@ -203,7 +203,7 @@ module "add_microk8s_model" {
 
 ## Seems it is still affected by: https://bugs.launchpad.net/juju/+bug/2039179
 module "microk8s_app" {
-  source = "../../cloud_providers/k8s/bootstrap/microk8s/"
+  source = "../../cloud_providers/k8s/setup/microk8s/"
 
   providers = {
       juju = juju.aws-juju
@@ -250,14 +250,13 @@ resource "juju_model" "metallb_model" {
   config = {
     logging-config              = "<root>=INFO"
     development                 = true
-    no-proxy                    = "jujucharms.com"
     update-status-hook-interval = "5m"
   }
   depends_on = [module.microk8s_cloud]
 }
 
 module "metallb" {
-  source = "../../bundle_templates/k8s/metallb/"
+  source = "../../stacks/metallb/"
 
   providers = {
       juju = juju.aws-juju
@@ -292,14 +291,14 @@ resource "juju_model" "cos_model" {
 }
 
 module "cos" {
-  source = "../../cloud_providers/k8s/cos/"
+  source = "../../stacks/cos/"
 
   providers = {
       juju = juju.aws-juju
   }
 
-  cos_bundle = var.cos_bundle
-  cos_overlay = var.cos_overlay_bundle
+  # cos_bundle = var.cos_bundle
+  # cos_overlay = var.cos_overlay_bundle
   cos_model_name = var.cos_model_name
 
   depends_on = [juju_model.cos_model]
@@ -309,7 +308,6 @@ module "cos" {
 // --------------------------------------------------------------------------------------
 //           Deploy control models in Juju
 // --------------------------------------------------------------------------------------
-
 
 module "opensearch_model" {
     source = "../../cloud_providers/aws/vpc/single_az/add_model/"
@@ -327,41 +325,55 @@ module "opensearch_model" {
 
 }
 
-variable "opensearch_bundle_params" {
-  type = object({
-    opensearch-charm            = string
-    opensearch-channel-entry    = string
-  })
-  default = {
-    opensearch-charm            = "opensearch"
-    opensearch-channel-entry    = ""
+resource juju_machine "tls-operator-machine" {
+  model = module.opensearch_model.name
+  constraints = {
+    "instance-type" = "t3.medium"
+    "root-disk" = "100G"
   }
+  depends_on = [module.opensearch_model]
 }
 
-resource "local_file" "opensearch_bundle" {
+resource juju_application tls-operator {
+  name = "self-signed-certificates"
 
-  filename = "${path.module}/opensearch_bundle.yaml"
+  model = module.opensearch_model.name
+  charm {
+    name = "self-signed-certificates"
+    channel = "latest/stable"
+  }
+  units = 1
+  placement = juju_machine.tls-operator-machine.machine_id
 
-  content = templatefile(
-    "${path.module}/../../bundle_templates/vm/simple_opensearch/bundle.yaml",
-    {
-      params = {
-        opensearch-charm            = "opensearch"
-        opensearch-channel-entry    = var.opensearch_charm_channel
-      }
-    }
-  )
+  depends_on = [juju_machine.tls-operator-machine]
 }
 
-resource "null_resource" "opensearch_model_deploy" {
+module "opensearch" {
+  source = "../../stacks/opensearch/small_deployments/"
 
-    provisioner "local-exec" {
-      command = "juju deploy --model opensearch ${local_file.opensearch_bundle.filename}"
-    }
+  providers = {
+      juju = juju.aws-juju
+  }
 
-    depends_on = [module.opensearch_model, local_file.opensearch_bundle, module.cos]
+  opensearch_constraints = {
+    instance_type = "t3.medium"
+    root-disk = "100G"
+    data-disk = "100G"
+    base = "opensearch"
+    spaces = "opensearch"
+    count = 3
+  }
+
+  tls-operator-integration = "admin/${module.opensearch_model.name}.${module.opensearch_model.cloud_name}"
+  grafana-dashboard-integration = module.cos.grafana-offering
+  logging-integration = module.cos.loki-offering
+  prometheus-scrape-integration = module.cos.prometheus-offering
+  prometheus-receive-remote-write-integration = module.cos.prometheus-rw-offering
+
+  model_name = module.opensearch_model.name
+
+  depends_on = [module.opensearch_model]
 }
-
 
 // --------------------------------------------------------------------------------------
 //           Wait for deployment

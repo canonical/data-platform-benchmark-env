@@ -21,7 +21,7 @@ resource "juju_model" "new_model" {
   }
 
   config = {
-    container-networking-method = "local"
+    container-networking-method = "fan"
     logging-config              = "<root>=INFO"
     development                 = true
     vpc-id                      = var.vpc_id

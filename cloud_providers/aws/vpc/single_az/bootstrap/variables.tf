@@ -26,6 +26,11 @@ variable "controller_name" {
     default = "aws-tf-controller"
 }
 
+variable "fan_networking_cidr" {
+    type = string
+    default = "252.0.0.0/8"
+}
+
 variable "constraints" {
     type = object({
         instance_type  = string
@@ -40,4 +45,9 @@ variable "constraints" {
 variable "agent_version" {
     type = string
     default = ""
+}
+
+variable "build_agent" {
+    type = bool
+    default = false
 }
