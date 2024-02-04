@@ -32,20 +32,20 @@ variable "vpc" {
   }
 }
 
-variable cos_bundle {
-  type = string
-  default = "../../cloud_providers/k8s/cos/bundle.yaml"
-}
-
-variable cos_overlay_bundle {
-  type = string
-  default = "../../cloud_providers/k8s/cos/cos-overlay.yaml"
-}
-
-variable cos_model_name {
-  type = string
-  default = "cos"
-}
+#variable cos_bundle {
+#  type = string
+#  default = "../../stacks/cos/bundle.yaml"
+#}
+#
+#variable cos_overlay_bundle {
+#  type = string
+#  default = "../../cloud_providers/k8s/cos/cos-overlay.yaml"
+#}
+#
+#variable cos_model_name {
+#  type = string
+#  default = "cos"
+#}
 
 variable charmed_k8s_model_name {
   type = string
@@ -165,109 +165,109 @@ provider "juju" {
   ca_certificate = module.aws_juju_bootstrap.controller_info.ca_cert
 }
 
-// --------------------------------------------------------------------------------------
-//           Deploy COS
-// --------------------------------------------------------------------------------------
+# // --------------------------------------------------------------------------------------
+# //           Deploy COS
+# // --------------------------------------------------------------------------------------
 
-module "deploy_k8s_vm" {
-  source = "../../cloud_providers/aws/k8s/microk8s/"
+# module "deploy_k8s_vm" {
+#   source = "../../cloud_providers/aws/k8s/microk8s/"
 
-  providers = {
-      aws = aws.us-east1
-  }
+#   providers = {
+#       aws = aws.us-east1
+#   }
 
-  vpc_id = module.aws_vpc.vpc_id
-  private_subnet_id = module.aws_vpc.private_subnet_id
-  aws_key_name = module.aws_vpc.key_name
-  aws_private_key_path = module.aws_vpc.private_key_file
-  public_key_path = pathexpand("~/.ssh/id_rsa.pub")
-  private_key_path = pathexpand("~/.ssh/id_rsa")
-  vpc_cidr = module.aws_vpc.vpc.cidr
-  ami_id = module.aws_vpc.ami_id
-  microk8s_ips = var.microk8s_ips
+#   vpc_id = module.aws_vpc.vpc_id
+#   private_subnet_id = module.aws_vpc.private_subnet_id
+#   aws_key_name = module.aws_vpc.key_name
+#   aws_private_key_path = module.aws_vpc.private_key_file
+#   public_key_path = pathexpand("~/.ssh/id_rsa.pub")
+#   private_key_path = pathexpand("~/.ssh/id_rsa")
+#   vpc_cidr = module.aws_vpc.vpc.cidr
+#   ami_id = module.aws_vpc.ami_id
+#   microk8s_ips = var.microk8s_ips
 
-  depends_on = [module.sshuttle]
-}
+#   depends_on = [module.sshuttle]
+# }
 
-module "add_microk8s_model" {
-    source = "../../cloud_providers/aws/vpc/single_az/add_model/"
+# module "add_microk8s_model" {
+#     source = "../../cloud_providers/aws/vpc/single_az/add_model/"
 
-    providers = {
-        juju = juju.aws-juju
-    }
+#     providers = {
+#         juju = juju.aws-juju
+#     }
 
-    name = var.microk8s_model_name
-    region = module.aws_vpc.vpc.region
-    vpc_id = module.aws_vpc.vpc_id
-    controller_info = module.aws_juju_bootstrap.controller_info
+#     name = var.microk8s_model_name
+#     region = module.aws_vpc.vpc.region
+#     vpc_id = module.aws_vpc.vpc_id
+#     controller_info = module.aws_juju_bootstrap.controller_info
 
-    depends_on = [module.deploy_k8s_vm]
+#     depends_on = [module.deploy_k8s_vm]
 
-}
+# }
 
-module "microk8s_app" {
-  source = "../../cloud_providers/k8s/bootstrap/microk8s/"
+# module "microk8s_app" {
+#   source = "../../cloud_providers/k8s/bootstrap/microk8s/"
 
-  providers = {
-      juju = juju.aws-juju
-  }
+#   providers = {
+#       juju = juju.aws-juju
+#   }
 
-  model_name = var.microk8s_model_name
-  public_key_path = pathexpand("~/.ssh/id_rsa.pub")
-  private_key_path = pathexpand("~/.ssh/id_rsa")
-  vpc_cidr = module.aws_vpc.vpc.cidr
-  microk8s_ips = var.microk8s_ips
-  microk8s_charm_channel = "1.28/stable"
+#   model_name = var.microk8s_model_name
+#   public_key_path = pathexpand("~/.ssh/id_rsa.pub")
+#   private_key_path = pathexpand("~/.ssh/id_rsa")
+#   vpc_cidr = module.aws_vpc.vpc.cidr
+#   microk8s_ips = var.microk8s_ips
+#   microk8s_charm_channel = "1.28/stable"
 
-  depends_on = [module.add_microk8s_model]
-}
+#   depends_on = [module.add_microk8s_model]
+# }
 
-// Add the microk8s cloud
-module "microk8s_cloud" {
-  source = "../../cloud_providers/k8s/add_k8s/"
+# // Add the microk8s cloud
+# module "microk8s_cloud" {
+#   source = "../../cloud_providers/k8s/add_k8s/"
 
-  controller_name = module.aws_juju_bootstrap.controller_info.name
-  microk8s_cloud_name = var.microk8s_cloud_name
-  microk8s_host_details = {
-    ip = module.deploy_k8s_vm.microk8s_private_ip
-    private_key_path = module.deploy_k8s_vm.id_rsa_pub_key
+#   controller_name = module.aws_juju_bootstrap.controller_info.name
+#   microk8s_cloud_name = var.microk8s_cloud_name
+#   microk8s_host_details = {
+#     ip = module.deploy_k8s_vm.microk8s_private_ip
+#     private_key_path = module.deploy_k8s_vm.id_rsa_pub_key
 
-  }
+#   }
 
-  depends_on = [module.microk8s_app]
-}
+#   depends_on = [module.microk8s_app]
+# }
 
-resource "juju_model" "cos_model" {
+# resource "juju_model" "cos_model" {
 
-  name = var.cos_model_name
-  cloud {
-    name = var.microk8s_cloud_name
-  }
+#   name = var.cos_model_name
+#   cloud {
+#     name = var.microk8s_cloud_name
+#   }
 
-  credential = var.microk8s_cloud_name
+#   credential = var.microk8s_cloud_name
 
-  config = {
-    logging-config              = "<root>=INFO"
-    development                 = true
-    no-proxy                    = "jujucharms.com"
-    update-status-hook-interval = "5m"
-  }
-  depends_on = [module.microk8s_cloud]
-}
+#   config = {
+#     logging-config              = "<root>=INFO"
+#     development                 = true
+#     no-proxy                    = "jujucharms.com"
+#     update-status-hook-interval = "5m"
+#   }
+#   depends_on = [module.microk8s_cloud]
+# }
 
-module "cos" {
-  source = "../../cloud_providers/k8s/cos/"
+# module "cos" {
+#   source = "../../cloud_providers/k8s/cos/"
 
-  providers = {
-      juju = juju.aws-juju
-  }
+#   providers = {
+#       juju = juju.aws-juju
+#   }
 
-  cos_bundle = var.cos_bundle
-  cos_overlay = var.cos_overlay_bundle
-  cos_model_name = var.cos_model_name
+#   cos_bundle = var.cos_bundle
+#   cos_overlay = var.cos_overlay_bundle
+#   cos_model_name = var.cos_model_name
 
-  depends_on = [juju_model.cos_model]
-}
+#   depends_on = [juju_model.cos_model]
+# }
 
 
 // --------------------------------------------------------------------------------------
@@ -293,7 +293,7 @@ module "add_charmed_k8s_models" {
 }
 
 module "charmed_k8s" {
-    source = "../../cloud_providers/k8s/bootstrap/charmed_k8s/"
+    source = "../../cloud_providers/k8s/setup/charmed_k8s/"
 
     count = var.cluster_number
 
@@ -301,11 +301,11 @@ module "charmed_k8s" {
         juju = juju.aws-juju
     }
 
-    cos = {
-        model_name = var.cos_model_name
-        bundle = var.cos_bundle
-        overlay = var.cos_overlay_bundle
-    }
+#    cos = {
+#        model_name = var.cos_model_name
+#        bundle = var.cos_bundle
+#        overlay = var.cos_overlay_bundle
+#    }
     k8s_model = "${var.charmed_k8s_model_name}-${count.index}"
     cni_cidr = var.cni_cidr
     service_cidr = var.service_cidr
@@ -317,6 +317,7 @@ module "charmed_k8s" {
     }
     k8s_worker_num_units = var.worker_count
 
-    depends_on = [module.add_charmed_k8s_models, module.cos]
+    # depends_on = [module.add_charmed_k8s_models, module.cos]
+    depends_on = [module.add_charmed_k8s_models]
 
 }

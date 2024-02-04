@@ -28,8 +28,10 @@ locals {
       }
     }
   }
-  juju_version = var.agent_version != ""   ? " --agent-version=${var.agent_version}" : "" 
-  build_agent  = var.build_agent   == true ? " --build-agent=${var.build_agent}"     : "" 
+  juju_version = var.agent_version    != ""   ? " --agent-version=${var.agent_version}" : "" 
+  build_agent  = var.build_agent_path != "" ? " --build-agent"     : "" 
+  build_debug  = var.build_with_debug_symbols ? 1 : 0
+  juju_cmd     = local.build_agent != "" ? "${var.build_agent_path}/_build/linux_amd64/bin/juju" : "/snap/bin/juju"
 }
 
 resource "local_sensitive_file" "generate_creds_yaml" {
@@ -68,7 +70,31 @@ resource "null_resource" "bootstrap" {
 
   # Remove the fan-networking from model-config by setting container-networking-method=local
   provisioner "local-exec" {
-    command = "juju bootstrap aws ${var.controller_name} --credential aws_tf_creds --model-default fan-config=${var.private_cidr}=${var.fan_networking_cidr} --model-default container-networking-method=local --config vpc-id=${var.vpc_id} --config vpc-id-force=true --config container-networking-method=fan --constraints 'instance-type=${var.constraints.instance_type} root-disk=${var.constraints.root_disk_size}' --to subnet=${var.private_cidr} ${local.juju_version} ${local.build_agent}"
+    command = <<-EOT
+    # If we are going to build the agent, get its path
+    if [ -n "${var.build_agent_path}" ]; then
+      pushd "${var.build_agent_path}"
+      DEBUG_JUJU=${local.build_debug} make build
+    fi
+    ${local.juju_cmd} bootstrap aws ${var.controller_name} \
+        --credential aws_tf_creds \
+        --model-default fan-config=${var.private_cidr}=${var.fan_networking_cidr} \
+        --model-default container-networking-method=local \
+        --config vpc-id=${var.vpc_id} \
+        --config vpc-id-force=true \
+        --config container-networking-method=fan \
+        --constraints 'instance-type=${var.constraints.instance_type} root-disk=${var.constraints.root_disk_size}' \
+        --to subnet=${var.private_cidr} \
+        ${local.juju_version} \
+        ${local.build_agent}
+
+
+    # If agent was built from localpath, then pop back to the original directory
+    if [ -n "${var.build_agent_path}" ]; then
+      popd
+    fi
+    EOT
+    interpreter= ["/bin/bash", "-c"]
   }
 
   provisioner "local-exec" {

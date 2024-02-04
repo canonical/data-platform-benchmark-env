@@ -103,6 +103,14 @@ resource "juju_integration" "traefik_prometheus" {
     name     = juju_application.prometheus.name
     endpoint = "ingress"
   }
+
+  depends_on = [
+    juju_application.traefik,
+    juju_application.prometheus,
+    juju_application.alertmanager,
+    juju_application.grafana,
+    juju_application.loki 
+  ]
 }
 
 //- [traefik:ingress-per-unit, loki:ingress]
@@ -235,24 +243,24 @@ resource "juju_integration" "grafana_alertmanager" {
 //- [prometheus:metrics-endpoint, grafana:metrics-endpoint]
 resource "juju_integration" "grafana_metrics" {
   model = var.cos_model_name
-  for_each = tolist(
-    {
-      name = juju_application.prometheus.name
+  for_each = {
+    "${juju_application.traefik.name}" = {
+      name     = juju_application.traefik.name
       endpoint = "metrics-endpoint"
     },
-    {
-      name = juju_application.alertmanager.name
+    rel2 = {
+      name     = juju_application.alertmanager.name
       endpoint = "self-metrics-endpoint"
     },
-    {
-      name = juju_application.loki.name
+    rel3 = {
+      name     = juju_application.loki.name
       endpoint = "metrics-endpoint"
     },
-    {
-      name = juju_application.grafana.name
+    rel4 = {
+      name     = juju_application.grafana.name
       endpoint = "metrics-endpoint"
-    },
-  )
+    }
+  }
 
   application {
     name     = juju_application.prometheus.name
@@ -263,6 +271,14 @@ resource "juju_integration" "grafana_metrics" {
     name     = each.value.name
     endpoint = each.value.endpoint
   }
+
+  depends_on = [
+    juju_application.traefik,
+    juju_application.prometheus,
+    juju_application.alertmanager,
+    juju_application.grafana,
+    juju_application.loki 
+  ]
 }
 
 # - [grafana:grafana-dashboard, loki:grafana-dashboard]
@@ -270,17 +286,17 @@ resource "juju_integration" "grafana_metrics" {
 # - [grafana:grafana-dashboard, alertmanager:grafana-dashboard]
 resource "juju_integration" "grafana_dashboard" {
   model = var.cos_model_name
-  for_each = tolist(
-    {
+  for_each = {
+    rel1 = {
       name = juju_application.loki.name
     },
-    {
+    rel2 = {
       name = juju_application.alertmanager.name
     },
-    {
+    rel3 = {
       name = juju_application.prometheus.name
-    },
-  )
+    }
+  }
 
   application {
     name     = juju_application.grafana.name

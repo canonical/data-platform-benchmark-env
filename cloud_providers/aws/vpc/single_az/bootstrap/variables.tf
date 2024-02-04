@@ -47,7 +47,12 @@ variable "agent_version" {
     default = ""
 }
 
-variable "build_agent" {
+variable "build_agent_path" {
+    type = string
+    default = ""
+}
+
+variable "build_with_debug_symbols" {
     type = bool
-    default = false
+    default = true
 }

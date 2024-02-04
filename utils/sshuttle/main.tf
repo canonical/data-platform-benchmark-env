@@ -5,29 +5,60 @@ terraform {
       source = "hashicorp/local"
       version = ">= 2.4.0"
     }
+    external = {
+      source = "hashicorp/external"
+      version = ">=2.3.2"
+    }
   }
+
 }
 
-resource "null_resource" "validate_sudo_not_need_password" {
+# resource "null_resource" "validate_sudo_not_need_password" {
+#   provisioner "local-exec" {
+#     command = <<-EOT
+#     sudo -n true 2>/dev/null;
+#     if [ $? -ne 0 ]; then
+#       echo "sshuttle demands SUDO: make sure the password has been entered";
+#       echo "1" > /tmp/sshuttle.pid.start_check
+#     else
+#       echo "0" > /tmp/sshuttle.pid.start_check
+#     fi
+#     EOT
+#   }
+# }
+
+
+resource "terraform_data" "sshuttle" {
+  input = "/tmp/sshuttle.pid"
+
   provisioner "local-exec" {
     command = <<-EOT
     sudo -n true 2>/dev/null;
     if [ $? -ne 0 ]; then
-      echo "sshuttle demands SUDO: make sure the password has been entered";
+      echo "sshuttle demands SUDO: make sure the password has been entered, e.g. on 'sudo true'";
+      exit 1
     fi
-    EOT    
-  }
-}
-
-resource "terraform_data" "sshuttle" {
-
-  provisioner "local-exec" {
-    command = "sudo sshuttle -D --pidfile=/tmp/sshuttle.pid -r ubuntu@${var.jumphost_ip} ${var.subnet} -e 'ssh -o StrictHostKeyChecking=no -i ${var.private_key_filepath}'"
+    if test -f /tmp/sshuttle.pid; then
+      sudo kill -9 $(cat /tmp/sshuttle.pid)
+    fi
+    sudo sshuttle -D --pidfile=/tmp/sshuttle.pid -r ubuntu@${var.jumphost_ip} ${var.subnet} -e 'ssh -o StrictHostKeyChecking=no -i ${var.private_key_filepath}'
+    EOT
   }
 
   provisioner "local-exec" {
     when = destroy
-    command = "sudo kill -9 $(cat /tmp/sshuttle.pid)"
+    command = <<-EOT
+    if [ $? -ne 0 ]; then
+      exit 1
+    fi
+    sudo kill -9 $(cat /tmp/sshuttle.pid)
+    EOT
   }
-  depends_on = [null_resource.validate_sudo_not_need_password]
+
+  # lifecycle {
+  #   // We want to create a new one before destroying the old value
+  #   // The main reason is to doublecheck we have sudo access before stopping the sshuttle
+  #   create_before_destroy = true
+  # }
+  // depends_on = [null_resource.validate_sudo_not_need_password]
 }

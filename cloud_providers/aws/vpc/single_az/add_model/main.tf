@@ -49,3 +49,9 @@ resource "terraform_data" "add_space" {
 
   depends_on = [resource.juju_model.new_model]
 }
+
+
+output "name" {
+  description = "COS model name"
+  value = var.name
+}

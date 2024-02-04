@@ -3,6 +3,11 @@ output "controller_name" {
   value = var.controller_name
 }
 
+output "juju_build_with_debug_symbols" {
+  description = "Build with debug symbols"
+  value = local.build_debug
+}
+
 output "controller_info" {
   description = "Controller info"
   value = {

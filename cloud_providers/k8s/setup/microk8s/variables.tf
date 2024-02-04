@@ -45,3 +45,13 @@ variable "microk8s_ips" {
 variable "microk8s_kubeconfig" {
   default = "~/.kube/tf_terraform_config"
 }
+
+variable "juju_build_from_git_branch" {
+  type = string
+  default = ""
+}
+
+variable "juju_build_with_debug_symbols_code" {
+  type = number
+  default = 1
+}

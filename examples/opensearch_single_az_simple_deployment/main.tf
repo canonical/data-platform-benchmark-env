@@ -23,6 +23,16 @@ variable "agent_version" {
     default = ""
 }
 
+variable "juju_build_agent_path" {
+    type = string
+    default = ""
+}
+
+variable "juju_git_branch" {
+    type = string
+    default = ""
+}
+
 variable "microk8s_ips" {
     type = list(string)
     default = ["192.168.235.201", "192.168.235.202", "192.168.235.203"]
@@ -71,6 +81,19 @@ variable "vpc" {
     az     = "us-east-1a"
     cidr   = "192.168.234.0/23"
   }
+}
+
+variable "spaces" {
+  type = list(object({
+    name = string
+    subnets = list(string)
+  }))
+    default = [
+    {
+      name = "internal-space"
+      subnets = ["192.168.235.0/24"]
+    },
+  ]
 }
 
 // --------------------------------------------------------------------------------------
@@ -150,6 +173,8 @@ module "aws_juju_bootstrap" {
     AWS_SECRET_KEY = var.AWS_SECRET_KEY
     agent_version = var.agent_version
 
+    build_agent_path = var.juju_build_agent_path
+
     depends_on = [module.sshuttle]
 }
 
@@ -216,6 +241,10 @@ module "microk8s_app" {
   microk8s_ips = var.microk8s_ips
   microk8s_charm_channel = "1.28/stable"
 
+  juju_build_from_git_branch = var.juju_git_branch
+  juju_build_with_debug_symbols_code = module.aws_juju_bootstrap.juju_build_with_debug_symbols
+
+
   depends_on = [module.add_microk8s_model]
 }
 
@@ -228,8 +257,8 @@ module "microk8s_cloud" {
   microk8s_host_details = {
     ip = module.deploy_k8s_vm.microk8s_private_ip
     private_key_path = module.deploy_k8s_vm.id_rsa_pub_key
-
   }
+
 
   depends_on = [module.microk8s_app]
 }
@@ -322,15 +351,17 @@ module "opensearch_model" {
     controller_info = module.aws_juju_bootstrap.controller_info
 
     depends_on = [module.cos]
-
 }
 
 resource juju_machine "tls-operator-machine" {
   model = module.opensearch_model.name
-  constraints = {
-    "instance-type" = "t3.medium"
-    "root-disk" = "100G"
-  }
+  constraints = join(" ", [
+      for k, v in {
+      "instance-type" = "t3.medium"
+      "root-disk" = "100G"
+      "spaces" = "internal-space"
+    } : "${k}=${v}"
+  ])
   depends_on = [module.opensearch_model]
 }
 
@@ -355,19 +386,21 @@ module "opensearch" {
       juju = juju.aws-juju
   }
 
+  opensearch_base = "ubuntu@22.04"
+
   opensearch_constraints = {
     instance_type = "t3.medium"
     root-disk = "100G"
     data-disk = "100G"
-    base = "opensearch"
-    spaces = "opensearch"
+    spaces = join(",", [for space in var.spaces : space.name])
+    channel = "2/edge"
     count = 3
   }
 
-  tls-operator-integration = "admin/${module.opensearch_model.name}.${module.opensearch_model.cloud_name}"
+  tls-operator-integration = "admin/${module.opensearch_model.name}.${juju_application.tls-operator.name}"
   grafana-dashboard-integration = module.cos.grafana-offering
   logging-integration = module.cos.loki-offering
-  prometheus-scrape-integration = module.cos.prometheus-offering
+  prometheus-scrape-integration = module.cos.prometheus-scrape-offering
   prometheus-receive-remote-write-integration = module.cos.prometheus-rw-offering
 
   model_name = module.opensearch_model.name
@@ -388,5 +421,5 @@ resource "null_resource" "wait_for_deploy" {
       EOT
     }
 
-    depends_on = [null_resource.opensearch_model_deploy]
+    depends_on = [module.opensearch]
 }
