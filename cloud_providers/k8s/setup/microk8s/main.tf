@@ -103,7 +103,7 @@ resource "null_resource" "juju_agents_local_build_if_needed" {
     sudo sh get-docker.sh
     sudo apt update
 
-    sudo apt install -y gcc make libsqlite3-dev musl ca-certificates bzip2 distro-info-data zip git docker-buildx-plugin docker-ce docker-ce-cli docker-ce-rootless-extras docker-compose-plugin
+    sudo apt install -y -qq gcc make libsqlite3-dev musl ca-certificates bzip2 distro-info-data zip git docker-buildx-plugin docker-ce docker-ce-cli docker-ce-rootless-extras docker-compose-plugin
     sudo snap install go --channel=1.20/stable --classic
 
     git clone https://github.com/juju/juju -b ${var.juju_build_from_git_branch}

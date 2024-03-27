@@ -118,20 +118,20 @@ locals {
 //           OpenSearch Deployment
 // --------------------------------------------------------------------------------------
 
-resource "juju_machine" "opensearch_nodes" {
-  count = var.opensearch_count
-
-  base = var.opensearch_base
-
-  model = var.model_name
-  constraints = join(" ", [
-    for k,v in {
-        "instance-type" = var.opensearch_constraints.instance_type
-        "root-disk" = var.opensearch_constraints.root-disk
-        "spaces" = var.opensearch_constraints.spaces
-    } : "${k}=${v}"
-  ])
-}
+#resource "juju_machine" "opensearch_nodes" {
+#  count = var.opensearch_count
+#
+#  base = var.opensearch_base
+#
+#  model = var.model_name
+#  constraints = join(" ", [
+#    for k,v in {
+#        "instance-type" = var.opensearch_constraints.instance_type
+#        "root-disk" = var.opensearch_constraints.root-disk
+#        "spaces" = var.opensearch_constraints.spaces
+#    } : "${k}=${v}"
+#  ])
+#}
 
 resource "juju_application" "opensearch" {
     name = "opensearch"
@@ -141,9 +141,18 @@ resource "juju_application" "opensearch" {
         channel = var.opensearch_channel
         base = var.opensearch_base
     }
+
+    constraints = join(" ", [
+      for k,v in {
+          "instance-type" = var.opensearch_constraints.instance_type
+          "root-disk" = var.opensearch_constraints.root-disk
+          "spaces" = var.opensearch_constraints.spaces
+      } : "${k}=${v}"
+    ])
+
     units = var.opensearch_count
-    placement = join(",", [for machine in juju_machine.opensearch_nodes : machine.machine_id])
-    depends_on = [juju_machine.opensearch_nodes]
+#    placement = join(",", [for machine in juju_machine.opensearch_nodes : machine.machine_id])
+#    depends_on = [juju_machine.opensearch_nodes]
 }
 
 resource "juju_application" "sysconfig" {
@@ -157,7 +166,7 @@ resource "juju_application" "sysconfig" {
     config = {
         "sysctl" = var.sysconfig-options
     }
-    depends_on = [juju_machine.opensearch_nodes]
+    depends_on = [juju_application.opensearch]
 }
 
 resource "juju_application" "grafana-agent" {
@@ -168,7 +177,7 @@ resource "juju_application" "grafana-agent" {
         channel = "latest/stable"
         base = var.opensearch_base
     }
-    depends_on = [juju_machine.opensearch_nodes]
+    depends_on = [juju_application.opensearch]
 }
 
 // --------------------------------------------------------------------------------------

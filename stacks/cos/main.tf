@@ -318,30 +318,35 @@ resource "juju_offer" "alertmanager-karma-dashboard" {
   model            = var.cos_model_name
   application_name = juju_application.alertmanager.name
   endpoint         = "karma-dashboard"
+  name             = "${juju_application.alertmanager.name}-karma-dashboard"
 }
 
 resource "juju_offer" "grafana-dashboard" {
   model            = var.cos_model_name
   application_name = juju_application.grafana.name
   endpoint         = "grafana-dashboard"
+  name             = "${juju_application.grafana.name}-grafana-dashboard"
 }
 
 resource "juju_offer" "loki-logging" {
   model            = var.cos_model_name
   application_name = juju_application.loki.name
   endpoint         = "logging"
+  name             = "${juju_application.loki.name}-logging"
 }
 
 resource "juju_offer" "prometheus-scrape" {
   model            = var.cos_model_name
   application_name = juju_application.prometheus.name
   endpoint         = "metrics-endpoint"
+  name             = "${juju_application.prometheus.name}-metrics-endpoint"
 }
 
 resource "juju_offer" "prometheus-receive-remote-write" {
   model            = var.cos_model_name
   application_name = juju_application.prometheus.name
   endpoint         = "receive-remote-write"
+  name             = "${juju_application.prometheus.name}-receive-remote-write"
 }
 
 /////////////////////////////////////////////////////////////

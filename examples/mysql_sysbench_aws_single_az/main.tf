@@ -35,7 +35,7 @@ variable "juju_git_branch" {
 
 variable "microk8s_ips" {
     type = list(string)
-    default = ["192.168.235.201", "192.168.235.202", "192.168.235.203"]
+    default = ["192.168.235.231", "192.168.235.232", "192.168.235.233"]
 }
 
 variable "microk8s_cloud_name" {
@@ -66,6 +66,11 @@ variable charmed_k8s_model_name {
 variable metallb_model_name {
   type = string
   default = "metallb"
+}
+
+variable cluster_number {
+  type = number
+  default = 1
 }
 
 variable "vpc" {
@@ -336,17 +341,19 @@ module "cos" {
 
 
 // --------------------------------------------------------------------------------------
-//           Deploy control models in Juju
+//           Deploy models in Juju
 // --------------------------------------------------------------------------------------
 
-module "opensearch_model" {
+module "control_mysql_model" {
     source = "../../cloud_providers/aws/vpc/single_az/add_model/"
+
+    count = var.cluster_number
 
     providers = {
         juju = juju.aws-juju
     }
 
-    name = "opensearch"
+    name = "control-mysql-${count.index}"
     region = module.aws_vpc.vpc.region
     vpc_id = module.aws_vpc.vpc_id
     controller_info = module.aws_juju_bootstrap.controller_info
@@ -354,73 +361,19 @@ module "opensearch_model" {
     depends_on = [module.cos]
 }
 
-resource juju_machine "tls-operator-machine" {
-  model = module.opensearch_model.name
-  constraints = join(" ", [
-      for k, v in {
-      "instance-type" = "t3.medium"
-      "root-disk" = "100G"
-      "spaces" = "internal-space"
-    } : "${k}=${v}"
-  ])
-  depends_on = [module.opensearch_model]
-}
+module "target_mysql_model" {
+    source = "../../cloud_providers/aws/vpc/single_az/add_model/"
 
-resource juju_application tls-operator {
-  name = "self-signed-certificates"
+    count = var.cluster_number
 
-  model = module.opensearch_model.name
-  charm {
-    name = "self-signed-certificates"
-    channel = "latest/stable"
-  }
-  units = 1
-  placement = juju_machine.tls-operator-machine.machine_id
-
-  depends_on = [juju_machine.tls-operator-machine]
-}
-
-module "opensearch" {
-  source = "../../stacks/opensearch/small_deployments/"
-
-  providers = {
-      juju = juju.aws-juju
-  }
-
-  opensearch_base = "ubuntu@22.04"
-
-  opensearch_constraints = {
-    instance_type = "c6a.xlarge"
-    root-disk = "100G"
-    data-disk = "100G"
-    spaces = join(",", [for space in var.spaces : space.name])
-    channel = "2/edge"
-    count = 3
-  }
-
-  tls-operator-integration = "admin/${module.opensearch_model.name}.${juju_application.tls-operator.name}"
-  grafana-dashboard-integration = module.cos.grafana-offering
-  logging-integration = module.cos.loki-offering
-  prometheus-scrape-integration = module.cos.prometheus-scrape-offering
-  prometheus-receive-remote-write-integration = module.cos.prometheus-rw-offering
-
-  model_name = module.opensearch_model.name
-
-  depends_on = [module.opensearch_model, juju_application.tls-operator]
-}
-
-// --------------------------------------------------------------------------------------
-//           Wait for deployment
-// --------------------------------------------------------------------------------------
-
-
-resource "null_resource" "wait_for_deploy" {
-
-    provisioner "local-exec" {
-      command = <<-EOT
-      juju-wait --model opensearch;
-      EOT
+    providers = {
+        juju = juju.aws-juju
     }
 
-    depends_on = [module.opensearch]
+    name = "control-mysql-${count.index}"
+    region = module.aws_vpc.vpc.region
+    vpc_id = module.aws_vpc.vpc_id
+    controller_info = module.aws_juju_bootstrap.controller_info
+
+    depends_on = [module.cos]
 }
