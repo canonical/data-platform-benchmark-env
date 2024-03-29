@@ -13,21 +13,6 @@ terraform {
 
 }
 
-# resource "null_resource" "validate_sudo_not_need_password" {
-#   provisioner "local-exec" {
-#     command = <<-EOT
-#     sudo -n true 2>/dev/null;
-#     if [ $? -ne 0 ]; then
-#       echo "sshuttle demands SUDO: make sure the password has been entered";
-#       echo "1" > /tmp/sshuttle.pid.start_check
-#     else
-#       echo "0" > /tmp/sshuttle.pid.start_check
-#     fi
-#     EOT
-#   }
-# }
-
-
 resource "terraform_data" "sshuttle" {
   input = "/tmp/sshuttle.pid"
 

@@ -79,7 +79,7 @@ resource "null_resource" "bootstrap" {
     ${local.juju_cmd} bootstrap aws ${var.controller_name} \
         --credential aws_tf_creds \
         --model-default fan-config=${var.private_cidr}=${var.fan_networking_cidr} \
-        --model-default container-networking-method=local \
+        --model-default container-networking-method=fan \
         --config vpc-id=${var.vpc_id} \
         --config vpc-id-force=true \
         --config container-networking-method=fan \
