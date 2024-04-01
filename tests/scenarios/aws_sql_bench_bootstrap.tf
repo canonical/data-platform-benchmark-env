@@ -84,20 +84,26 @@ data "external" "controller_api_endpoints_without_fan_networking" {
   depends_on = [local_file.juju_controller_info]
 }
 
-resource null_resource "aws_sql_bench_bootstrap" {
-    depends_on = [
-        module.aws_juju_bootstrap,
-        data.external.controller_api_endpoints_without_fan_networking
-    ]
-}
-
-output "controller_info" {
-  description = "Controller info"
-  value = {
+locals {
+    controller = {
       name = module.aws_juju_bootstrap.controller_name
       api_endpoints = data.external.controller_api_endpoints_without_fan_networking.result["output"]
-      ca_cert = yamldecode(data.external.juju_controller_info.result["output"])[module.aws_juju_bootstrap.controller_name]["details"]["ca-cert"]
+      ca_cert = base64encode(yamldecode(data.external.juju_controller_info.result["output"])[module.aws_juju_bootstrap.controller_name]["details"]["ca-cert"])
       username = yamldecode(data.external.juju_controller_info.result["output"])[module.aws_juju_bootstrap.controller_name]["account"]["user"]
-      password = yamldecode(data.external.juju_controller_info.result["output"])[module.aws_juju_bootstrap.controller_name]["account"]["password"]        
-  }
+      password = yamldecode(data.external.juju_controller_info.result["output"])[module.aws_juju_bootstrap.controller_name]["account"]["password"]
+    }
+}
+
+resource "local_file" "juju_controller" {
+  filename = pathexpand("${path.cwd}/juju-controller.yaml")
+  content = yamlencode(local.controller)
+  file_permission = "0600"
+  depends_on = [
+      module.aws_juju_bootstrap,
+      data.external.controller_api_endpoints_without_fan_networking
+  ]
+}
+
+resource null_resource "aws_sql_bench_bootstrap" {
+    depends_on = [local_file.juju_controller]
 }

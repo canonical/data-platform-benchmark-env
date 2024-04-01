@@ -80,6 +80,8 @@ resource "null_resource" "bootstrap" {
         --credential aws_tf_creds \
         --model-default fan-config=${var.private_cidr}=${var.fan_networking_cidr} \
         --model-default container-networking-method=fan \
+        --model-default vpc-id=${var.vpc_id} \
+        --model-default vpc-id-force=true \
         --config vpc-id=${var.vpc_id} \
         --config vpc-id-force=true \
         --config container-networking-method=fan \
