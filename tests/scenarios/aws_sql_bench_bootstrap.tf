@@ -81,7 +81,7 @@ locals {
 data "external" "controller_api_endpoints_without_fan_networking" {
   program = ["python3", "-c", "import ipaddress; print( '{ \"output\": \"' + ','.join([ip for ip in '${local.juju_endpoints}'.split(',') if ipaddress.IPv4Address(ip.split(':')[0]) not in ipaddress.IPv4Network('${var.fan_networking_cidr}')]) + '\" }' );"]
 
-  depends_on = [local_file.juju_controller_info]
+  depends_on = [data.external.juju_controller_info]
 }
 
 locals {

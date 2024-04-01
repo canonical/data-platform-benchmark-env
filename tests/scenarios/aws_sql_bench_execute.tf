@@ -1,4 +1,4 @@
-resource "local_file" "aws_sql_bench_execute_juju_controller" {
+data "local_file" "aws_sql_bench_execute_juju_controller" {
   filename = pathexpand("~/juju-controller.yaml")
 
   depends_on = [null_resource.aws_sql_bench_bootstrap]
@@ -7,10 +7,10 @@ resource "local_file" "aws_sql_bench_execute_juju_controller" {
 provider "juju" {
   alias = "aws-juju"
 
-  controller_addresses = local_file.aws_sql_bench_execute_juju_controller.content["api_endpoints"]
-  username = local_file.aws_sql_bench_execute_juju_controller.content["username"]
-  password = local_file.aws_sql_bench_execute_juju_controller.content["password"]
-  ca_certificate = base64encode(local_file.aws_sql_bench_execute_juju_controller.content["ca_cert"])
+  controller_addresses = yamlencode(data.local_file.aws_sql_bench_execute_juju_controller.content)["api_endpoints"]
+  username = yamlencode(data.local_file.aws_sql_bench_execute_juju_controller.content)["username"]
+  password = yamlencode(data.local_file.aws_sql_bench_execute_juju_controller.content)["password"]
+  ca_certificate = base64decode(yamlencode(data.local_file.aws_sql_bench_execute_juju_controller.content)["ca_cert"])
 }
 
 module "sshuttle_execute" {
