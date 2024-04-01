@@ -1,11 +1,28 @@
+variable "controller_info" {
+     type = object({
+        api_endpoints  = string
+        username = string
+        password = string
+        ca_cert = string
+    })
+}
+
 provider "juju" {
   alias = "aws-juju"
 
-#  controller_addresses = "aws-tf-controller"
-  controller_addresses = module.aws_juju_bootstrap.controller_info.api_endpoints
-  username = module.aws_juju_bootstrap.controller_info.username
-  password = module.aws_juju_bootstrap.controller_info.password
-  ca_certificate = module.aws_juju_bootstrap.controller_info.ca_cert
+  controller_addresses = var.controller_info.api_endpoints
+  username = var.controller_info.username
+  password = var.controller_info.password
+  ca_certificate = var.controller_info.ca_cert
+}
+
+module "sshuttle_execute" {
+    source = "../../utils/sshuttle/"
+
+    jumphost_ip = module.aws_vpc.jumphost_elastic_ip
+    subnet = module.aws_vpc.vpc.cidr
+    private_key_filepath = module.aws_vpc.private_key_file
+
 }
 
 // --------------------------------------------------------------------------------------
@@ -29,7 +46,7 @@ module "deploy_k8s_vm" {
   ami_id = module.aws_vpc.ami_id
   microk8s_ips = var.microk8s_ips
 
-  depends_on = [module.sshuttle]
+  depends_on = [module.sshuttle_execute]
 }
 
 module "add_microk8s_model" {
@@ -498,4 +515,10 @@ resource "null_resource" "juju_execute_sysbench" {
     EOT
   }
   depends_on = [juju_integration.sysbench-router-relation]
+}
+
+resource "null_resource" "aws_sql_bench_execute" {
+  depends_on = [
+    null_resource.juju_execute_sysbench
+  ]
 }

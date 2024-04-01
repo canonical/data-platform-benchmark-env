@@ -16,9 +16,18 @@ variable "SECRET_KEY" {
     sensitive = true
 }
 
+variable "region" {
+    type = string
+}
+
 // --------------------------------------------------------------------------------------
 //      Varibles that must be set
 // --------------------------------------------------------------------------------------
+
+variable "fan_networking_cidr" {
+    type = string
+    default = "252.0.0.0/8"
+}
 
 variable "microk8s_model_name" {
     type = string
@@ -28,21 +37,6 @@ variable "microk8s_model_name" {
 variable "opensearch_charm_channel" {
     type = string
     default = "2/edge"
-}
-
-variable "agent_version" {
-    type = string
-    default = ""
-}
-
-variable "juju_build_agent_path" {
-    type = string
-    default = ""
-}
-
-variable "juju_git_branch" {
-    type = string
-    default = ""
 }
 
 variable "microk8s_ips" {
@@ -111,4 +105,23 @@ variable "spaces" {
       subnets = ["192.168.235.0/24"]
     },
   ]
+}
+
+// --------------------------------------------------------------------------------------
+//      Juju built from source variables (specifying will trigger a full build)
+// --------------------------------------------------------------------------------------
+
+variable "agent_version" {
+    type = string
+    default = ""
+}
+
+variable "juju_build_agent_path" {
+    type = string
+    default = ""
+}
+
+variable "juju_git_branch" {
+    type = string
+    default = ""
 }
