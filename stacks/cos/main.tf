@@ -24,6 +24,11 @@ variable "cos_model_name" {
   type = string
 }
 
+variable "channel" {
+  type = string
+  default = "latest/edge"
+}
+
 resource "juju_application" "traefik" {
   name = "traefik"
   trust = true
@@ -31,7 +36,7 @@ resource "juju_application" "traefik" {
   model = var.cos_model_name
   charm {
     name = "traefik-k8s"
-    channel = "stable"
+    channel = var.channel
   }
   units = 1
 }
@@ -43,7 +48,7 @@ resource "juju_application" "alertmanager" {
   model = var.cos_model_name
   charm {
     name = "alertmanager-k8s"
-    channel = "stable"
+    channel = var.channel
   }
   units = 1
 }
@@ -55,7 +60,7 @@ resource "juju_application" "prometheus" {
   model = var.cos_model_name
   charm {
     name = "prometheus-k8s"
-    channel = "stable"
+    channel = var.channel
   }
   units = 1
 }
@@ -67,7 +72,7 @@ resource "juju_application" "grafana" {
   model = var.cos_model_name
   charm {
     name = "grafana-k8s"
-    channel = "stable"
+    channel = var.channel
   }
   units = 1
 }
@@ -79,7 +84,7 @@ resource "juju_application" "loki" {
   model = var.cos_model_name
   charm {
     name = "loki-k8s"
-    channel = "stable"
+    channel = var.channel
   }
   units = 1
 }
