@@ -85,19 +85,19 @@ Also, leave standard meta-arguments in the bundle as it will be used as a templa
 ## Where my new Terraform module goes?
 
 Here is the step-by-step to add your new module to the right place:
+```
 1) Is it juju-related? If not, then add to utils (e.g. how to setup a proxy or sshuttle)
 2) Is it to create a new cloud env? Use cloud_providers/
-2.1) Is it to create a new cloud basic env (e.g. a new VPC), bootstrap a controller or add a new model? -> use the setup/, bootstrap/ and add_model/ respectively
-2.2) Is it how to create a new k8s cluster on top of a given cloud (e.g. GKE, EKS)? Then use k8s/
+  2.1) Is it to create a new cloud basic env (e.g. a new VPC), bootstrap a controller or add a new model? -> use the setup/, bootstrap/ and add_model/ respectively
+  2.2) Is it how to create a new k8s cluster on top of a given cloud (e.g. GKE, EKS)? Then use k8s/
 3) Is it to deploy an app, independent of any cloud? Then, use "stacks/"
 4) Is it to deploy an app, dependent of a given cloud? Then, use "cloud_providers/<cloud>/apps" (e.g. aws-integrator in charmed-k8s)
 5) Nothing of the above, you've just built a new terraform to bootstrap and do a bunch of things on top of all this --> examples/
+```
 
 # TODOs
 
-* Sshuttle should check if sudo is enabled without password, fail otherwise
 * COS Microk8s VM demands a list of IPs that is consecutive. That is used for metallb
   We need a way to validate that list of IPs
   Ideally, we should not need to specify that list of IPs and get it done by the provider itself
 * We need a way to manage the `tfstate` folder: it is important to remember that the state will contain sensitive information such as cloud access keys
-* Ideally, use TF_ARG instead of passing secrets via CLI
