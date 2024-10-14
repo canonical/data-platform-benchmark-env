@@ -18,7 +18,7 @@ sudo apt install -y sshuttle python3 python3-jinja2
 
 ```
 sudo snap install terraform --channel=latest/stable --classic
-sudo snap install juju --channel=3.1/stable --classic
+sudo snap install juju --channel=3.5/stable --classic
 sudo snap install juju-wait
 ```
 
