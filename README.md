@@ -72,15 +72,7 @@ The examples provided contains a sshuttle routine: it will setup a sshuttle daem
 
 Use the sshuttle script in `utils/` if you want to jump over a jumphost to your environment.
 
-# Adding a new scenario
-
-## New Scenario
-
-If you plan to bring your own bundle once the deployment is done, then consider the following spaces:
-* internal-space: subnets isolated within the tenant and accessible only via a jumphost.
-* public-space:  subnets in the public networks, where a Floating/Elastic/Public IP can be assigned to the VM and it becomes externally reachable. In `examples`, this is used to setup the jumphost to access the private subnets
-
-Also, leave standard meta-arguments in the bundle as it will be used as a template for the deployments.
+# Adding a new providers, scenarios, etc
 
 ## Where my new Terraform module goes?
 
@@ -92,12 +84,17 @@ Here is the step-by-step to add your new module to the right place:
   2.2) Is it how to create a new k8s cluster on top of a given cloud (e.g. GKE, EKS)? Then use k8s/
 3) Is it to deploy an app, independent of any cloud? Then, use "stacks/"
 4) Is it to deploy an app, dependent of a given cloud? Then, use "cloud_providers/<cloud>/apps" (e.g. aws-integrator in charmed-k8s)
-5) Nothing of the above, you've just built a new terraform to bootstrap and do a bunch of things on top of all this --> examples/
+5) Nothing of the above, you've just built a new terraform to bootstrap juju and do a bunch of things on top of all this --> examples/
 ```
 
-# TODOs
+## Non-juju cloud providers
 
-* COS Microk8s VM demands a list of IPs that is consecutive. That is used for metallb
-  We need a way to validate that list of IPs
-  Ideally, we should not need to specify that list of IPs and get it done by the provider itself
-* We need a way to manage the `tfstate` folder: it is important to remember that the state will contain sensitive information such as cloud access keys
+It is possible, with terraform, to automate non-juju cloud providers. That means, we need to have the target cloud's terraform provider to spin up all needed resources + VMs and then use manual provider in juju to add them up.
+
+## New Scenario
+
+If you plan to bring your own bundle once the deployment is done, then consider the following spaces:
+* internal-space: subnets isolated within the tenant and accessible only via a jumphost.
+* public-space:  subnets in the public networks, where a Floating/Elastic/Public IP can be assigned to the VM and it becomes externally reachable. In `examples`, this is used to setup the jumphost to access the private subnets
+
+Also, leave standard meta-arguments in the bundle as it will be used as a template for the deployments.
