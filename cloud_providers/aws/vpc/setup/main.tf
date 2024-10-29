@@ -104,8 +104,6 @@ resource "aws_route_table_association" "public_rt_assoc" {
 resource "aws_eip" "jumphost_nat_eip" {
   count = "${length(var.private_cidrs)}"
 
-  vpc_id = aws_vpc.single_az_vpc.id
-
   tags = {
     Name = "igw-${var.vpc.name}-${var.public_cidr.name}"
   }
@@ -117,7 +115,7 @@ resource "aws_eip" "jumphost_nat_eip" {
 resource "aws_nat_gateway" "single_az_nat" {
   count = "${length(var.private_cidrs)}"
 
-  allocation_id = aws_eip.jumphost_nat_eip.id[count.index]
+  allocation_id = aws_eip.jumphost_nat_eip[count.index].id
   subnet_id     = aws_subnet.public_cidr.id
   connectivity_type = "public"
 
@@ -147,7 +145,7 @@ resource "aws_route_table" "private_rt" {
 
   route {
     cidr_block        = "0.0.0.0/0"
-    gateway_id        = aws_nat_gateway.single_az_nat.id[count.index]
+    gateway_id        = aws_nat_gateway.single_az_nat[count.index].id
   }
   route {
     cidr_block = var.vpc.cidr
@@ -161,8 +159,8 @@ resource "aws_route_table" "private_rt" {
 resource "aws_route_table_association" "private_rt_assoc" {
   count = "${length(var.private_cidrs)}"
 
-  subnet_id = aws_subnet.private_cidr.id[count.index]
-  route_table_id = aws_route_table.private_rt.id[count.index]
+  subnet_id = aws_subnet.private_cidr[count.index].id
+  route_table_id = aws_route_table.private_rt[count.index].id
 }
 
 

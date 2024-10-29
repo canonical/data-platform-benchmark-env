@@ -32,6 +32,7 @@ variable "private_cidrs" {
   default = {
     private_cidr1 = {
       cidr = "192.168.235.0/24"
+      name = "private_cidr1"
       tags = {}
     }
   }

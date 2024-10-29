@@ -48,5 +48,5 @@ output "vpc_id" {
 
 output "private_subnet_id" {
   description = "ID of the private subnet created"
-  value = aws_subnet.private_cidr.id
+  value = aws_subnet.private_cidr[*].id
 }

@@ -24,7 +24,7 @@ variable "model_name" {
     type = string
 }
 
-variable "opensearch_constraints" {
+variable "constraints" {
     type = object({
       instance_type = string
       spaces = string
@@ -34,17 +34,17 @@ variable "opensearch_constraints" {
     })
 }
 
-variable "opensearch_count" {
+variable "node_count" {
     type = number
     default = 3
 }
 
-variable "opensearch_base" {
+variable "base" {
     type = string
     default = "ubuntu@22.04"
 }
 
-variable "opensearch_channel" {
+variable "channel" {
     type = string
     default = "2/edge"
 }
@@ -69,12 +69,7 @@ variable "prometheus-receive-remote-write-integration" {
     type = string
 }
 
-variable "sysconfig-options" {
-    type = string
-    default = "{ vm.max_map_count: 262144, vm.swappiness: 0, net.ipv4.tcp_retries2: 5 }"
-}
-
-variable "opensearch_expose" {
+variable "expose" {
     type = bool
     default = false
 }
@@ -82,11 +77,6 @@ variable "opensearch_expose" {
 variable "grafana-agent-appname" {
     type = string
     default = "grafana-agent"
-}
-
-variable "sysconfig-appname" {
-    type = string
-    default = "sysconfig"
 }
 
 locals {
@@ -118,55 +108,26 @@ locals {
 //           OpenSearch Deployment
 // --------------------------------------------------------------------------------------
 
-#resource "juju_machine" "opensearch_nodes" {
-#  count = var.opensearch_count
-#
-#  base = var.opensearch_base
-#
-#  model = var.model_name
-#  constraints = join(" ", [
-#    for k,v in {
-#        "instance-type" = var.opensearch_constraints.instance_type
-#        "root-disk" = var.opensearch_constraints.root-disk
-#        "spaces" = var.opensearch_constraints.spaces
-#    } : "${k}=${v}"
-#  ])
-#}
-
 resource "juju_application" "opensearch" {
     name = "opensearch"
     model = var.model_name
     charm {
         name = "opensearch"
-        channel = var.opensearch_channel
-        base = var.opensearch_base
+        channel = var.channel
+        base = var.base
     }
 
     constraints = join(" ", [
       for k,v in {
-          "instance-type" = var.opensearch_constraints.instance_type
-          "root-disk" = var.opensearch_constraints.root-disk
-          "spaces" = var.opensearch_constraints.spaces
+          "instance-type" = var.constraints.instance_type
+          "root-disk" = var.constraints.root-disk
+          "spaces" = var.constraints.spaces
       } : "${k}=${v}"
     ])
 
-    units = var.opensearch_count
+    units = var.node_count
 #    placement = join(",", [for machine in juju_machine.opensearch_nodes : machine.machine_id])
 #    depends_on = [juju_machine.opensearch_nodes]
-}
-
-resource "juju_application" "sysconfig" {
-    name = var.sysconfig-appname
-    model = var.model_name
-    charm {
-        name = "sysconfig"
-        channel = "latest/stable"
-        base = var.opensearch_base
-    }
-    config = {
-        "sysctl" = var.sysconfig-options
-    }
-    depends_on = [juju_application.opensearch]
 }
 
 resource "juju_application" "grafana-agent" {
@@ -175,7 +136,7 @@ resource "juju_application" "grafana-agent" {
     charm {
         name = "grafana-agent"
         channel = "latest/stable"
-        base = var.opensearch_base
+        base = var.base
     }
     depends_on = [juju_application.opensearch]
 }
@@ -183,33 +144,6 @@ resource "juju_application" "grafana-agent" {
 // --------------------------------------------------------------------------------------
 //           Integration
 // --------------------------------------------------------------------------------------
-
-resource "juju_integration" "opensearch_grafana_sysconfig-integrations" {
-    model = var.model_name
-
-    for_each = {
-        relation1 = {
-            name_req = juju_application.opensearch.name
-            endpoint_req = "monitoring"
-            name_prov = var.grafana-agent-appname
-            endpoint_prov = "monitoring"
-        },
-        relation2 = {
-            name_req = juju_application.opensearch.name
-            endpoint_req = "juju-info"
-            name_prov = var.sysconfig-appname
-            endpoint_prov = "juju-info"
-        }
-    }
-    application {
-        name     = each.value.name_req
-        endpoint = each.value.endpoint_req
-    }
-    application {
-        name     = each.value.name_prov
-        endpoint = each.value.endpoint_prov
-    } 
-}
 
 resource "juju_integration" "grafana-agent_cos-integration" {
     model = var.model_name
