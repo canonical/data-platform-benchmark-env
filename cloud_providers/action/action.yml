@@ -1,0 +1,72 @@
+name: 'juju-aws-prod-deploy'
+description: 'Sets up an AWS env for Juju with multiple AZs'
+inputs:
+  region:
+    description: 'The AWS region to be used'
+    default: 'us-east-1'
+  vpc_cidr:
+    description: 'The CIDR that will be used by all the VPC subnets'
+    default: '192.168.240.0/22'
+  tags:
+    description: 'Deployment-wide "key: value" tags to be applied to all resources'
+    default: |
+      CI: true
+  public_cidr:
+    description: 'Public subnet CIDR'
+    default: '192.168.240.0/24'
+  private_cidrs:
+    description: 'Yaml-formatted map of private CIDRs, each subnet will land on a different AZ'
+    default: |
+      private_cidr1: 192.168.241.0/24
+      private_cidr2: 192.168.242.0/24
+      private_cidr3: 192.168.243.0/24
+
+
+  juju_ha_enabled:
+    description: 'Boolean to set if Juju HA should be enabled'
+    default: true
+  juju_client_channel:
+    description: 'The Juju channel to run locally'
+    default: '3.6/beta'
+
+runs:
+  using: "composite"
+  steps:
+    - id: preamble
+      run: |
+        sudo apt update
+        sudo apt install -y python3-pip
+        sudo pip3 install yaml
+        sudo snap install terraform --classic
+        sudo snap install juju --channel=${{ inputs.juju_client_channel }} --classic
+      shell: bash
+
+    - id: prepare-arguments
+      run: |
+          import json
+          import yaml
+          import os
+
+          args = {
+            "region": ${{ inputs.region }},
+            "vpc_cidr": ${{ inputs.vpc_cidr }},
+            "tags": yaml.safe_load(${{ inputs.tags }}),
+            "public_cidr": ${{ inputs.public_cidr }},
+            "private_cidrs": yaml.safe_load(${{ inputs.private_cidrs }}),
+          }
+
+
+          ARCHITECTURE = "${{ inputs.architecture }}"
+          try:
+              default_runner = DEFAULT_RUNNERS[ARCHITECTURE]
+          except KeyError:
+              raise ValueError(f"`architecture` input not recognized: {ARCHITECTURE}")
+          output = f"default_runner={json.dumps(default_runner)}"
+          print(output)
+          with open(os.environ["GITHUB_OUTPUT"], "a") as file:
+              file.write(output)
+      shell: python
+
+    - id: aws-setup
+      run: 
+      shell: bash

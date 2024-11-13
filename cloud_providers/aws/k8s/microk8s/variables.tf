@@ -8,7 +8,7 @@ variable "private_subnet_id" {
 
 variable "security_group_name" {
   description = "Name of the security group to associate with the instance"
-  default = "microk8s-sg"
+  default     = "microk8s-sg"
 }
 
 variable "aws_key_name" {
@@ -17,7 +17,7 @@ variable "aws_key_name" {
 
 variable "aws_private_key_path" {
   description = "Path to the AWS SSH private key"
-  type = string
+  type        = string
 }
 
 variable "private_key_path" {
@@ -34,7 +34,7 @@ variable "ami_id" {
 
 variable "instance_type" {
   description = "Type of instance to launch"
-  default = "t2.xlarge"
+  default     = "t2.xlarge"
 }
 
 variable "vpc_cidr" {
@@ -52,6 +52,6 @@ variable "juju_pub_key" {
 }
 
 variable "root_disk_size_in_gb" {
-  type = number
-  default = 600  # 600G of disk
+  type    = number
+  default = 600 # 600G of disk
 }

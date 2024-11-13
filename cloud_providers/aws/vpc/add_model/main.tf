@@ -6,7 +6,7 @@ terraform {
       version = ">= 0.3.1"
     }
     null = {
-      source = "hashicorp/null"
+      source  = "hashicorp/null"
       version = "3.2.1"
     }
   }
@@ -29,17 +29,17 @@ resource "juju_model" "new_model" {
     update-status-hook-interval = "1m"
   }
 
-#  provisioner "local-exec" {
-#    when = destroy
-#    command = <<-EOT
-#    juju destroy-model --force --no-wait --no-prompt --destroy-storage ${self.name}
-#    EOT
-#  }
+  #  provisioner "local-exec" {
+  #    when = destroy
+  #    command = <<-EOT
+  #    juju destroy-model --force --no-wait --no-prompt --destroy-storage ${self.name}
+  #    EOT
+  #  }
 }
 
 resource "terraform_data" "add_space" {
   for_each = {
-    for index, space in var.spaces:
+    for index, space in var.spaces :
     space.name => space
   }
 
@@ -53,5 +53,5 @@ resource "terraform_data" "add_space" {
 
 output "name" {
   description = "COS model name"
-  value = var.name
+  value       = var.name
 }

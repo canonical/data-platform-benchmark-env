@@ -1,37 +1,37 @@
 variable "name" {
-    type = string
+  type = string
 }
 
 variable "region" {
-    type = string
+  type = string
 }
 
 variable "vpc_id" {
-    type = string
+  type = string
 }
 
 variable "controller_info" {
   type = object({
-        name = string
-        api_endpoints = string
-        ca_cert = string
-        username = string
-        password = string
-    })
+    name          = string
+    api_endpoints = string
+    ca_cert       = string
+    username      = string
+    password      = string
+  })
 }
 
 variable "spaces" {
   type = list(object({
-    name = string
+    name    = string
     subnets = list(string)
   }))
   default = [
-    { 
-      name = "public-space"
+    {
+      name    = "public-space"
       subnets = ["192.168.234.0/24"]
     },
     {
-      name = "internal-space"
+      name    = "internal-space"
       subnets = ["192.168.235.0/24"]
     },
   ]

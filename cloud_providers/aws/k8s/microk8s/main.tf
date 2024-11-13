@@ -6,11 +6,11 @@ terraform {
       version = ">= 5.0.0"
     }
     local = {
-      source = "hashicorp/local"
+      source  = "hashicorp/local"
       version = ">= 2.4.0"
     }
     null = {
-      source = "hashicorp/null"
+      source  = "hashicorp/null"
       version = "3.2.1"
     }
   }
@@ -61,10 +61,10 @@ resource "aws_security_group" "microk8s_sg" {
 // 
 resource "aws_network_interface" "microk8s_nic" {
 
-  subnet_id = var.private_subnet_id
-  private_ip_list = var.microk8s_ips
+  subnet_id               = var.private_subnet_id
+  private_ip_list         = var.microk8s_ips
   private_ip_list_enabled = true
-  security_groups = [aws_security_group.microk8s_sg.id]
+  security_groups         = [aws_security_group.microk8s_sg.id]
 
   depends_on = [aws_security_group.microk8s_sg, aws_network_interface.microk8s_nic]
 }
@@ -74,12 +74,12 @@ resource "aws_instance" "microk8s_vm" {
   ami           = var.ami_id
   instance_type = var.instance_type
   network_interface {
-     network_interface_id = "${aws_network_interface.microk8s_nic.id}"
-     device_index = 0
+    network_interface_id = aws_network_interface.microk8s_nic.id
+    device_index         = 0
   }
-  key_name      = var.aws_key_name
+  key_name = var.aws_key_name
   root_block_device {
-     volume_size   = var.root_disk_size_in_gb
+    volume_size = var.root_disk_size_in_gb
   }
 
   depends_on = [aws_security_group.microk8s_sg, aws_network_interface.microk8s_nic]
@@ -87,14 +87,14 @@ resource "aws_instance" "microk8s_vm" {
 
 
 # For some reason, this file is getting deleted at destroy time.
-resource "local_file" "id_rsa_pub_key"  {
+resource "local_file" "id_rsa_pub_key" {
   filename = "/tmp/id_rsa_temp123.pub"
   content  = file(pathexpand(var.public_key_path))
 }
 
 resource "null_resource" "wait_microk8s_vm" {
   provisioner "local-exec" {
-    command = <<-EOT
+    command     = <<-EOT
     ssh-keygen -R ${aws_network_interface.microk8s_nic.private_ip_list.0} || true;
     for i in {0..5}; do 
       sleep 60s;
