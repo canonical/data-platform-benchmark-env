@@ -210,7 +210,7 @@ resource "juju_application" "sysbench" {
   }
   config = {
     "threads" = 20
-  } 
+  }
   units = 1
   placement = juju_machine.mysql-microk8s-vm[count.index].machine_id
   depends_on = [module.mysql_microk8s_model, juju_machine.mysql-microk8s-vm]

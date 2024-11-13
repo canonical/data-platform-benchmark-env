@@ -16,15 +16,15 @@ terraform {
   }
 }
 
-provider "aws" {
-  region     = var.vpc.region
-  access_key = var.AWS_ACCESS_KEY
-  secret_key = var.AWS_SECRET_KEY
+# provider "aws" {
+#   region     = var.vpc.region
+#   access_key = var.AWS_ACCESS_KEY
+#   secret_key = var.AWS_SECRET_KEY
 
-  default_tags {
-    tags = var.provider_tags
-  }
-}
+#   default_tags {
+#     tags = var.provider_tags
+#   }
+# }
 
 // --------------------------------------------------------------------------------------
 //           Key build
@@ -78,7 +78,7 @@ resource "aws_internet_gateway" "single_az_igw" {
 resource "aws_subnet" "public_cidr" {
   vpc_id            = aws_vpc.single_az_vpc.id
   cidr_block        = var.public_cidr.cidr
-  availability_zone = var.vpc.az
+  availability_zone = var.public_cidr.az
 
   tags = {
     Name = var.public_cidr.name
@@ -141,7 +141,7 @@ resource "aws_subnet" "private_cidr" {
 
   vpc_id            = aws_vpc.single_az_vpc.id
   cidr_block        = values(var.private_cidrs)[count.index].cidr
-  availability_zone = var.vpc.az
+  availability_zone = values(var.private_cidrs)[count.index].az
 
   tags = {
     Name = "${keys(var.private_cidrs)[count.index]}"
