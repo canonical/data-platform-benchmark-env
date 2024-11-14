@@ -43,7 +43,7 @@ output "key_name" {
 
 output "vpc_id" {
   description = "The vpc id."
-  value       = aws_vpc.single_az_vpc.id
+  value       = aws_vpc.multi_az_vpc.id
 }
 
 output "private_subnet_id" {

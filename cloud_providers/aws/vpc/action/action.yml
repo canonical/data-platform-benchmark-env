@@ -168,10 +168,10 @@ runs:
         tfstate_path: $GITHUB_WORKSPACE/terraform.tfvars
         module_path: cloud_providers/aws/vpc/add_model/action
 
-    - name: Destroy VPC
-      if: always()
-      run: |
-        juju kill-controller ${{ inputs.controller_name }}
-        pushd cloud_providers/aws/vpc/action/
-        terraform destroy -auto-approve
-        popd
+    # - name: Destroy VPC
+    #   if: always()
+    #   run: |
+    #     juju kill-controller ${{ inputs.controller_name }}
+    #     pushd cloud_providers/aws/vpc/action/
+    #     terraform destroy -auto-approve
+    #     popd
