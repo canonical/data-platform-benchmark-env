@@ -13,7 +13,7 @@ terraform {
 }
 
 resource "juju_model" "new_model" {
-  name = var.name
+  name = var.model_name
 
   cloud {
     name   = "aws"
@@ -22,11 +22,11 @@ resource "juju_model" "new_model" {
 
   config = {
     container-networking-method = "fan"
-    logging-config              = "<root>=INFO"
+    logging-config              = "<root>=DEBUG"
     development                 = true
     vpc-id                      = var.vpc_id
     vpc-id-force                = true
-    update-status-hook-interval = "1m"
+    update-status-hook-interval = "5m"
   }
 
   #  provisioner "local-exec" {
@@ -44,7 +44,7 @@ resource "terraform_data" "add_space" {
   }
 
   provisioner "local-exec" {
-    command = "juju add-space --model ${var.name} ${each.key} ${join(" ", each.value.subnets)}"
+    command = "juju add-space --model ${var.model_name} ${each.key} ${join(" ", each.value.subnets)}"
   }
 
   depends_on = [resource.juju_model.new_model]
@@ -52,6 +52,6 @@ resource "terraform_data" "add_space" {
 
 
 output "name" {
-  description = "COS model name"
-  value       = var.name
+  description = "model name"
+  value       = var.model_name
 }

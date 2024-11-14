@@ -4,15 +4,22 @@ import json
 import yaml
 import os
 import jinja2
+import uuid
+import time
+
+
+ts = int(time.time())
+id = str(uuid.uuid4())
+
 
 REGION_TXT = "us-east-1"
 VPC_CIDR_TXT = "192.168.240.0/22"
 TAGS_TXT = """CI: true"""
 PUBLIC_CIDR_TXT = "192.168.240.0/24"
-PRIVATE_CIDRS_TXT = """private_cidr1: 
+PRIVATE_CIDRS_TXT = """private_cidr1:
   cidr: 192.168.241.0/24
   az: us-east-1a
-private_cidr2: 
+private_cidr2:
   cidr: 192.168.242.0/24
   az: us-east-1b
 private_cidr3:
@@ -42,7 +49,13 @@ args = {
   "tags": yaml.safe_load(TAGS_TXT),
   "public_cidr": public_cidrs,
   "private_cidrs": private_cidrs,
+  "timestamp": ts,
+  "id": id,
+  "public_cidrs_to_space": str([public_cidrs['cidr']]).replace("'", '"'),
+  "private_cidrs_to_space": str([arg['cidr'] for arg in private_cidrs.values()]).replace("'", '"'),
 }
+
+args["tags"]["CI"] = "true"
 
 template_tfvars="""vpc = {
   name   = "test-vpc"
@@ -60,7 +73,19 @@ public_cidr = {
 {%- for key, val in args['public_cidr'].items() %}
   {{ key }} = "{{ val }}"
 {%- endfor %}
+  run_id = "run-{{ args['timestamp'] }}-{{ args['id'] }}"
 }
+
+spaces = [
+  {
+    name    = "public-space"
+    subnets = {{ args['public_cidrs_to_space'] }}
+  },
+  {
+    name    = "private-space"
+    subnets = {{ args["private_cidrs_to_space"] }}
+  },
+]
 
 private_cidrs = {
 {%- for subnet_name, subnet in args['private_cidrs'].items() %}

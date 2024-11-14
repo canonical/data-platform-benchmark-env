@@ -16,6 +16,10 @@ variable "AWS_SECRET_KEY" {
     sensitive = true
 }
 
+variable "region" {
+    type = string
+}
+
 variable "vpc" {
   type = object({
     name   = string
@@ -25,35 +29,31 @@ variable "vpc" {
   default = {
     name   = "test-vpc"
     region = "us-east-1"
-    cidr   = "192.168.240.0/22"
+    cidr   = "192.168.234.0/23"
   }
 }
 
-variable "private_cidrs" {
-  type = map(object({
-    cidr = string
-    name = string
-    az = string
+variable "spaces" {
+  type = list(object({
+    name    = string
+    subnets = list(string)
   }))
-  default = {
-    private_cidr1 = {
-      cidr = "192.168.241.0/24"
-      name = "private_cidr1"
-      az = "us-east-1a"
-    }
-  }
+  default = [
+    {
+      name    = "public-space"
+      subnets = ["192.168.234.0/24"]
+    },
+    {
+      name    = "internal-space"
+      subnets = ["192.168.235.0/24"]
+    },
+  ]
 }
 
-variable "public_cidr" {
-  type = object({
-    cidr = string
-    name = string
-    az = string
-  })
+variable "provider_tags" {
+  type = map(string)
   default = {
-    cidr = "192.168.240.0/24"
-    name = "public_cidr"
-    az = "us-east-1a"
+    CI = "true"
   }
 }
 
@@ -65,11 +65,4 @@ variable "fan_networking_cidr" {
 variable "model_name" {
   type    = string
   default = "test"
-}
-
-variable "provider_tags" {
-  type = map(string)
-  default = {
-    CI = "true"
-  }
 }

@@ -33,10 +33,18 @@ inputs:
   model_name:
     description: 'Juju model name'
     default: "test"
+  controller_name:
+    description: 'Juju controller name'
+    default: "test"
 
 runs:
   using: "composite"
   steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        ref: aws-extend-multi-subnets
+
     - name: Preamble
       run: |
         sudo apt update
@@ -53,6 +61,11 @@ runs:
           import yaml
           import os
           import jinja2
+          import uuid
+          import time
+
+          ts = int(time.time())
+          id = str(uuid.uuid4())
 
           private_cidrs = {
             key: {
@@ -76,10 +89,16 @@ runs:
             "public_cidr": public_cidrs,
             "private_cidrs": private_cidrs,
             "model_name": ${{ inputs.model_name }},
+            "timestamp": ts,
+            "id": id,
+            "controller_name": ${{ inputs.controller_name }},
+            "public_cidrs_to_space": str([public_cidrs['cidr']]).replace("'", '"'),
+            "private_cidrs_to_space": str([arg['cidr'] for arg in private_cidrs.values()]).replace("'", '"'),
           }
+          args["tags"]["CI"] = "true"
 
           template_tfvars="""vpc = {
-            name   = "test-vpc"
+            name   = "test-vpc-{{ args['id'] }}"
             region = "{{ args['region']  }}"
             cidr   = "{{ args['vpc_cidr'] }}"
           }
@@ -88,6 +107,7 @@ runs:
           {%- for tag, val in args['tags'].items() %}
             {{ tag }} = "{{ val }}"
           {%- endfor %}
+            run_id = "run-{{ args['timestamp'] }}-{{ args['id'] }}"
           }
 
           public_cidr = {
@@ -106,6 +126,19 @@ runs:
           {%- endfor %}
           }
 
+          spaces = [
+            {
+              name    = "public-space"
+              subnets = {{ args['public_cidrs_to_space'] }}
+            },
+            {
+              name    = "private-space"
+              subnets = {{ args["private_cidrs_to_space"] }}
+            },
+          ]
+
+          controller_name = "{{ args['controller_name'] }}"
+
           model_name = "{{ args['model_name'] }}"
           """
           environment = jinja2.Environment()
@@ -113,20 +146,32 @@ runs:
           output = template.render(args=args)
           with open("terraform.tfvars", "w") as file:
               file.write(template.render(args=args))
+
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
+              print(f'vpc_id={value}', file=fh)
       shell: python
 
-    - id: AWS VPC Setup && Juju Bootstrap
+    - name: AWS VPC Setup
       run: |
-        pushd cloud_providers/aws/vpc/setup/
+        pushd cloud_providers/aws/vpc/action/
         terraform init
-        terraform apply -auto-approve -var-file=../../../terraform.tfvars
-        popd
-      shell: bash
+        terraform apply -auto-approve -var-file=$GITHUB_WORKSPACE/terraform.tfvars
 
-    - id: Juju Bootstrap
-      run: |
-        pushd cloud_providers/aws/vpc/bootstrap/
-        terraform init
-        terraform apply -auto-approve -var-file=../../../terraform.tfvars
+        VPC_ID=$(terraform output vpc_id)
+        echo "" >> $GITHUB_WORKSPACE/terraform.tfvars  # New line
+        echo "vpc_id = ${VPC_ID}" >> $GITHUB_WORKSPACE/terraform.tfvars
         popd
       shell: bash
+    - name: Add Model
+      uses: ./cloud_providers/aws/vpc/add_model/action
+      with:
+        tfstate_path: $GITHUB_WORKSPACE/terraform.tfvars
+        module_path: cloud_providers/aws/vpc/add_model/action
+
+    - name: Destroy VPC
+      if: always()
+      run: |
+        juju kill-controller ${{ inputs.controller_name }}
+        pushd cloud_providers/aws/vpc/action/
+        terraform destroy -auto-approve
+        popd

@@ -1,0 +1,20 @@
+name: 'juju-aws-prod-deploy'
+description: 'Sets up an AWS env for Juju with multiple AZs'
+inputs:
+  tfvars_path:
+    description: 'Path to the terraform state file'
+    default: 'terraform.tfvars'
+  module_path:
+    description: 'Path to the terraform module'
+    default: 'cloud_providers/aws/vpc/add_model/action'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Add Model
+      run: |
+        pushd ${{ module_path }}
+        terraform init
+        terraform apply -auto-approve -var-file=${{ tfvars_path }}
+        popd
+      shell: bash

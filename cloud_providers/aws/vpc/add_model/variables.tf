@@ -1,4 +1,4 @@
-variable "name" {
+variable "model_name" {
   type = string
 }
 

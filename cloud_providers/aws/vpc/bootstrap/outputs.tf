@@ -3,6 +3,11 @@ output "controller_name" {
   value       = var.controller_name
 }
 
+output "vpc_id" {
+  description = "VPC ID"
+  value       = module.aws_vpc.vpc_id
+}
+
 output "juju_build_with_debug_symbols" {
   description = "Build with debug symbols"
   value       = local.build_debug

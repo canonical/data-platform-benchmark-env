@@ -54,7 +54,7 @@ resource "local_sensitive_file" "generated_public_key_path" {
 //           VPC build   
 // --------------------------------------------------------------------------------------
 
-resource "aws_vpc" "single_az_vpc" {
+resource "aws_vpc" "multi_az_vpc" {
   cidr_block           = var.vpc.cidr
   enable_dns_hostnames = true
 
@@ -63,12 +63,17 @@ resource "aws_vpc" "single_az_vpc" {
   }
 }
 
+# data "aws_route_table" "vpc_default_rt" {
+#   vpc_id = aws_vpc.multi_az_vpc.id
+#   route_table_id = aws_vpc.multi_az_vpc.main_route_table_id
+# }
+
 // --------------------------------------------------------------------------------------
 //           Public subnet build
 // --------------------------------------------------------------------------------------
 
 resource "aws_internet_gateway" "single_az_igw" {
-  vpc_id = aws_vpc.single_az_vpc.id
+  vpc_id = aws_vpc.multi_az_vpc.id
 
   tags = {
     Name = "igw-${var.vpc.name}-${var.public_cidr.name}"
@@ -76,7 +81,7 @@ resource "aws_internet_gateway" "single_az_igw" {
 }
 
 resource "aws_subnet" "public_cidr" {
-  vpc_id            = aws_vpc.single_az_vpc.id
+  vpc_id            = aws_vpc.multi_az_vpc.id
   cidr_block        = var.public_cidr.cidr
   availability_zone = var.public_cidr.az
 
@@ -86,7 +91,7 @@ resource "aws_subnet" "public_cidr" {
 }
 
 resource "aws_route_table" "public_rt" {
-  vpc_id = aws_vpc.single_az_vpc.id
+  vpc_id = aws_vpc.multi_az_vpc.id
 
   route {
     cidr_block = "0.0.0.0/0"
@@ -139,7 +144,7 @@ resource "aws_nat_gateway" "single_az_nat" {
 resource "aws_subnet" "private_cidr" {
   count = length(var.private_cidrs)
 
-  vpc_id            = aws_vpc.single_az_vpc.id
+  vpc_id            = aws_vpc.multi_az_vpc.id
   cidr_block        = values(var.private_cidrs)[count.index].cidr
   availability_zone = values(var.private_cidrs)[count.index].az
 
@@ -151,7 +156,7 @@ resource "aws_subnet" "private_cidr" {
 resource "aws_route_table" "private_rt" {
   count = length(var.private_cidrs)
 
-  vpc_id = aws_vpc.single_az_vpc.id
+  vpc_id = aws_vpc.multi_az_vpc.id
 
   route {
     cidr_block = "0.0.0.0/0"
@@ -196,7 +201,7 @@ data "aws_ami" "ubuntu" {
 
 resource "aws_security_group" "sg_jumphost" {
   description = "SSH access to the jumphost"
-  vpc_id      = aws_vpc.single_az_vpc.id
+  vpc_id      = aws_vpc.multi_az_vpc.id
 
   ingress {
     from_port   = 22

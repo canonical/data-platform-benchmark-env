@@ -26,8 +26,10 @@ module "aws_vpc" {
     }
 
     vpc = var.vpc
-    access_key = var.AWS_ACCESS_KEY
-    secret_key = var.AWS_SECRET_KEY
+    AWS_ACCESS_KEY = var.AWS_ACCESS_KEY
+    AWS_SECRET_KEY = var.AWS_SECRET_KEY
+    private_cidrs = var.private_cidrs
+    public_cidr = var.public_cidr
 }
 
 module "sshuttle_bootstrap" {
@@ -49,13 +51,16 @@ module "aws_juju_bootstrap" {
 
     aws_creds_name = "aws_creds_us_east_1"
     vpc_id = module.aws_vpc.vpc_id
-    private_cidr = module.aws_vpc.private_cidr
-    access_key = var.AWS_ACCESS_KEY
-    secret_key = var.AWS_SECRET_KEY
-    agent_version = var.agent_version
+    private_cidr = values(module.aws_vpc.private_cidrs)[0].cidr
+    AWS_ACCESS_KEY = var.AWS_ACCESS_KEY
+    AWS_SECRET_KEY = var.AWS_SECRET_KEY
+    # agent_version = var.agent_version
     fan_networking_cidr = var.fan_networking_cidr
 
-    build_agent_path = var.juju_build_agent_path
-
     depends_on = [module.sshuttle_bootstrap]
+}
+
+output "vpc_id" {
+  description = "Build with debug symbols"
+  value       = module.aws_vpc.vpc_id
 }

@@ -13,6 +13,10 @@ terraform {
       source = "hashicorp/local"
       version = ">= 2.4.0"
     }
+    juju = {
+      source  = "juju/juju"
+      version = ">= 0.3.1"
+    }
     external = {
       source = "hashicorp/external"
       version = ">=2.3.2"
