@@ -60,7 +60,18 @@ module "aws_juju_bootstrap" {
     depends_on = [module.sshuttle_bootstrap]
 }
 
+data "local_file" "juju_controller_yaml" {
+  # filename = pathexpand("~/juju-controller.yaml")
+  filename = pathexpand("~/.local/share/juju/controllers.yaml")
+}
+
+output "controller_info" {
+  description = "Controller info"
+  value = module.aws_juju_bootstrap.controller_info
+}
+
 output "vpc_id" {
   description = "Build with debug symbols"
   value       = module.aws_vpc.vpc_id
 }
+

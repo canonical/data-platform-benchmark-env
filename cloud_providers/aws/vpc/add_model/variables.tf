@@ -10,15 +10,15 @@ variable "vpc_id" {
   type = string
 }
 
-variable "controller_info" {
-  type = object({
-    name          = string
-    api_endpoints = string
-    ca_cert       = string
-    username      = string
-    password      = string
-  })
-}
+# variable "controller_info" {
+#   type = object({
+#     name          = string
+#     api_endpoints = string
+#     ca_cert       = string
+#     username      = string
+#     password      = string
+#   })
+# }
 
 variable "spaces" {
   type = list(object({

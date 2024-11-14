@@ -51,6 +51,8 @@ args = {
   "private_cidrs": private_cidrs,
   "timestamp": ts,
   "id": id,
+  "controller_name": "test",
+  "model_name": "test",
   "public_cidrs_to_space": str([public_cidrs['cidr']]).replace("'", '"'),
   "private_cidrs_to_space": str([arg['cidr'] for arg in private_cidrs.values()]).replace("'", '"'),
 }
@@ -62,6 +64,8 @@ template_tfvars="""vpc = {
   region = "{{ args['region']  }}"
   cidr   = "{{ args['vpc_cidr'] }}"
 }
+
+region = "{{ args['region'] }}"
 
 provider_tags = {
 {%- for tag, val in args['tags'].items() %}
@@ -98,6 +102,8 @@ private_cidrs = {
 }
 
 model_name = "{{ args['model_name'] }}"
+
+controller_name = "{{ args['controller_name'] }}"
 """
 environment = jinja2.Environment()
 template = environment.from_string(template_tfvars)

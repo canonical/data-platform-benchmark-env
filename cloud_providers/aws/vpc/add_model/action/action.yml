@@ -18,3 +18,11 @@ runs:
         terraform apply -auto-approve -var-file=${{ tfvars_path }}
         popd
       shell: bash
+
+
+    - name: Destroy VPC
+      if: always()
+      run: |
+        pushd cloud_providers/aws/vpc/action/
+        terraform destroy -auto-approve
+        popd

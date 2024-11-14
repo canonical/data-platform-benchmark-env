@@ -103,6 +103,8 @@ runs:
             cidr   = "{{ args['vpc_cidr'] }}"
           }
 
+          region = "{{ args['region'] }}"
+
           provider_tags = {
           {%- for tag, val in args['tags'].items() %}
             {{ tag }} = "{{ val }}"
@@ -160,6 +162,8 @@ runs:
         VPC_ID=$(terraform output vpc_id)
         echo "" >> $GITHUB_WORKSPACE/terraform.tfvars  # New line
         echo "vpc_id = ${VPC_ID}" >> $GITHUB_WORKSPACE/terraform.tfvars
+        echo "" >> $GITHUB_WORKSPACE/terraform.tfvars
+        echo "controller_info = ${OUTPUT}" >> $GITHUB_WORKSPACE/terraform.tfvars
         popd
       shell: bash
     - name: Add Model
@@ -171,7 +175,7 @@ runs:
     # - name: Destroy VPC
     #   if: always()
     #   run: |
-    #     juju kill-controller ${{ inputs.controller_name }}
+    #     juju kill-controller ${{ inputs.controller_name }} --no-prompt
     #     pushd cloud_providers/aws/vpc/action/
     #     terraform destroy -auto-approve
     #     popd

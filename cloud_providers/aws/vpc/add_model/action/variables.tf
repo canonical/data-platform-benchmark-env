@@ -16,10 +16,6 @@ variable "AWS_SECRET_KEY" {
     sensitive = true
 }
 
-variable "region" {
-    type = string
-}
-
 variable "vpc" {
   type = object({
     name   = string
@@ -31,6 +27,16 @@ variable "vpc" {
     region = "us-east-1"
     cidr   = "192.168.234.0/23"
   }
+}
+
+variable "controller_info" {
+  type = object({
+    name          = string
+    api_endpoints = string
+    ca_cert       = string
+    username      = string
+    password      = string
+  })
 }
 
 variable "spaces" {
@@ -65,4 +71,13 @@ variable "fan_networking_cidr" {
 variable "model_name" {
   type    = string
   default = "test"
+}
+
+variable "controller_name" {
+  type    = string
+  default = "aws-juju"
+}
+
+variable "vpc_id" {
+  type    = string
 }

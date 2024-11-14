@@ -67,6 +67,11 @@ variable "model_name" {
   default = "test"
 }
 
+variable "controller_name" {
+  type    = string
+  default = "test"
+}
+
 variable "provider_tags" {
   type = map(string)
   default = {
