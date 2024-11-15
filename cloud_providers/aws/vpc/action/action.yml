@@ -160,10 +160,11 @@ runs:
         terraform apply -auto-approve -var-file=$GITHUB_WORKSPACE/terraform.tfvars
 
         VPC_ID=$(terraform output vpc_id)
+        CTL=$(terraform output controller_info)
         echo "" >> $GITHUB_WORKSPACE/terraform.tfvars  # New line
         echo "vpc_id = ${VPC_ID}" >> $GITHUB_WORKSPACE/terraform.tfvars
         echo "" >> $GITHUB_WORKSPACE/terraform.tfvars
-        echo "controller_info = ${OUTPUT}" >> $GITHUB_WORKSPACE/terraform.tfvars
+        echo "controller_info = ${CTL}" >> $GITHUB_WORKSPACE/terraform.tfvars
         popd
       shell: bash
     - name: Add Model
