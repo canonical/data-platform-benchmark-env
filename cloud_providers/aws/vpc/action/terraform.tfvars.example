@@ -1,0 +1,30 @@
+vpc = {
+  name   = "test-vpc"
+  region = "us-east-1"
+  az     = "us-east-1a"
+  cidr   = "192.168.240.0/22"
+}
+
+provider_tags = {
+  CI = "true"
+}
+
+public_cidr = {
+  cidr = "192.168.240.0/24"
+  name = "public_cidr"
+}
+
+private_cidrs = {
+  private_cidr1 = {
+    cidr = "192.168.241.0/24"
+    name = "private_cidr1"
+  }
+  private_cidr2 = {
+    cidr = "192.168.242.0/24"
+    name = "private_cidr2"
+  }
+  private_cidr3 = {
+    cidr = "192.168.243.0/24"
+    name = "private_cidr3"
+  }
+}

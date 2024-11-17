@@ -1,0 +1,57 @@
+name: 'juju-aws-prod-deploy'
+description: 'Sets up opensearch environment'
+inputs:
+  tfvars_path:
+    description: 'Path to the terraform state file'
+    default: 'terraform.tfvars'
+  module_path:
+    description: 'Path to the terraform module'
+    default: 'actions/components/opensearch'
+
+  opensearch-constraints:
+    description: String representing the constraints for the opensearch cluster
+    default: 'arch=amd64 instance-type=m5.2xlarge root-disk-size=100GB spaces=private-space'
+  opensearch-dashboards-constraints:
+    description: String representing the constraints for the opensearch dashboards
+    default: 'arch=amd64 instance-type=m5.large root-disk-size=100GB spaces=private-space'
+  self-signed-cert-constraints:
+    description: String representing the constraints for the self-signed cert
+    default: 'arch=amd64 instance-type=t2.medium root-disk-size=50GB spaces=private-space'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        ref: 2/edge
+        repository: canonical/opensearch-operator
+        path: opensearch-operator
+
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        ref: aws-extend-multi-subnets
+        repository: canonical/data-platform-benchmark-env
+
+    - name: VPC deploy and bootstrap
+      uses: ./cloud_providers/aws/vpc/action
+
+    - name: OpenSearch Testing
+      run: |
+        pushd ${{ module_path }}
+        terraform init
+        TF_VAR_model_name=test terraform apply -auto-approve -var-file=${{ tfvars_path }}
+        popd
+
+        pushd opensearch-operator
+        tox run -e integration -- 'tests/integration/ha/test_ha.py' --group='1' -m '' --model test
+        popd
+
+    - name: Destroy VPC
+      if: always()
+      run: |
+        juju kill-controller ${{ inputs.controller_name }} --no-prompt
+        pushd cloud_providers/aws/vpc/action/
+        terraform destroy -auto-approve
+        popd

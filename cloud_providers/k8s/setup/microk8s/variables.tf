@@ -1,12 +1,12 @@
 variable "model_name" {
   description = "Name of the model to create"
-  type = string
+  type        = string
   // default = "cos-microk8s"
 }
 
 variable "hostpath_storage_enabled" {
   description = "Enable hostpath storage"
-  default = true
+  default     = true
 }
 
 variable "private_key_path" {
@@ -18,18 +18,18 @@ variable "public_key_path" {
 }
 
 variable "microk8s_charm_channel" {
-  type = string
+  type    = string
   default = "1.28/stable"
 }
 
 variable "microk8s_config_channel" {
-  type = string
+  type    = string
   default = "auto"
 }
 
 variable "instance_type" {
   description = "Type of instance to launch"
-  default = "t2.xlarge"
+  default     = "t2.xlarge"
 }
 
 variable "vpc_cidr" {
@@ -38,7 +38,7 @@ variable "vpc_cidr" {
 }
 
 variable "microk8s_ips" {
-  type = list(string)
+  type    = list(string)
   default = ["192.168.235.201", "192.168.235.202", "192.168.235.203"]
 }
 
@@ -47,11 +47,11 @@ variable "microk8s_kubeconfig" {
 }
 
 variable "juju_build_from_git_branch" {
-  type = string
+  type    = string
   default = ""
 }
 
 variable "juju_build_with_debug_symbols_code" {
-  type = number
+  type    = number
   default = 1
 }

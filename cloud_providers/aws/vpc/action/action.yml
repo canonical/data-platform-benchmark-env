@@ -1,0 +1,182 @@
+name: 'juju-aws-prod-deploy'
+description: 'Sets up an AWS env for Juju with multiple AZs'
+inputs:
+  region:
+    description: 'The AWS region to be used'
+    default: 'us-east-1'
+  vpc_cidr:
+    description: 'The CIDR that will be used by all the VPC subnets'
+    default: '192.168.240.0/22'
+  tags:
+    description: 'Deployment-wide "key: value" tags to be applied to all resources'
+    default: |
+      CI: true
+  public_cidr:
+    description: 'Public subnet CIDR'
+    default: '192.168.240.0/24'
+  private_cidrs:
+    description: 'Yaml-formatted map of private CIDRs, each subnet will land on a different AZ'
+    default: |
+      private_cidr1: 
+        cidr: 192.168.241.0/24
+        az: us-east-1a
+      private_cidr2: 
+        cidr: 192.168.242.0/24
+        az: us-east-1b
+      private_cidr3:
+        cidr: 192.168.243.0/24
+        az: us-east-1c
+
+  juju_client_channel:
+    description: 'The Juju channel to run locally'
+    default: '3.6/beta'
+  model_name:
+    description: 'Juju model name'
+    default: "test"
+  controller_name:
+    description: 'Juju controller name'
+    default: "test"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        ref: aws-extend-multi-subnets
+
+    - name: Preamble
+      run: |
+        sudo apt update
+        sudo apt install -y python3-pip
+        sudo pip3 install yaml || true
+        sudo pip3 install jinja2 || true
+        sudo snap install terraform --classic
+        sudo snap install juju --channel=${{ inputs.juju_client_channel }} --classic
+      shell: bash
+
+    - name: Prepare Arguments
+      run: |
+          import json
+          import yaml
+          import os
+          import jinja2
+          import uuid
+          import time
+
+          ts = int(time.time())
+          id = str(uuid.uuid4())
+
+          private_cidrs = {
+            key: {
+              "name": key,
+              "cidr": value["cidr"],
+              "az": value["az"]
+            }
+            for key, value in yaml.safe_load(${{ inputs.private_cidrs }}).items()
+          }
+
+          public_cidrs = {
+            "name": "public_cidr",
+            "cidr": ${{ inputs.public_cidr }}
+            "az": "{}a".format(${{ inputs.region }}a)
+          }
+
+          args = {
+            "region": ${{ inputs.region }},
+            "vpc_cidr": ${{ inputs.vpc_cidr }},
+            "tags": yaml.safe_load(${{ inputs.tags }}),
+            "public_cidr": public_cidrs,
+            "private_cidrs": private_cidrs,
+            "model_name": ${{ inputs.model_name }},
+            "timestamp": ts,
+            "id": id,
+            "controller_name": ${{ inputs.controller_name }},
+            "public_cidrs_to_space": str([public_cidrs['cidr']]).replace("'", '"'),
+            "private_cidrs_to_space": str([arg['cidr'] for arg in private_cidrs.values()]).replace("'", '"'),
+          }
+          args["tags"]["CI"] = "true"
+
+          template_tfvars="""vpc = {
+            name   = "test-vpc-{{ args['id'] }}"
+            region = "{{ args['region']  }}"
+            cidr   = "{{ args['vpc_cidr'] }}"
+          }
+
+          region = "{{ args['region'] }}"
+
+          provider_tags = {
+          {%- for tag, val in args['tags'].items() %}
+            {{ tag }} = "{{ val }}"
+          {%- endfor %}
+            run_id = "run-{{ args['timestamp'] }}-{{ args['id'] }}"
+          }
+
+          public_cidr = {
+          {%- for key, val in args['public_cidr'].items() %}
+            {{ key }} = "{{ val }}"
+          {%- endfor %}
+          }
+
+          private_cidrs = {
+          {%- for subnet_name, subnet in args['private_cidrs'].items() %}
+            {{ subnet_name }} = {
+              cidr = "{{ subnet['cidr'] }}"
+              name = "{{ subnet['name'] }}"
+              az = "{{ subnet['az'] }}"
+            }
+          {%- endfor %}
+          }
+
+          spaces = [
+            {
+              name    = "public-space"
+              subnets = {{ args['public_cidrs_to_space'] }}
+            },
+            {
+              name    = "private-space"
+              subnets = {{ args["private_cidrs_to_space"] }}
+            },
+          ]
+
+          controller_name = "{{ args['controller_name'] }}"
+
+          model_name = "{{ args['model_name'] }}"
+          """
+          environment = jinja2.Environment()
+          template = environment.from_string(template_tfvars)
+          output = template.render(args=args)
+          with open("terraform.tfvars", "w") as file:
+              file.write(template.render(args=args))
+
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
+              print(f'vpc_id={value}', file=fh)
+      shell: python
+
+    - name: AWS VPC Setup
+      run: |
+        pushd cloud_providers/aws/vpc/action/
+        terraform init
+        terraform apply -auto-approve -var-file=$GITHUB_WORKSPACE/terraform.tfvars
+
+        VPC_ID=$(terraform output vpc_id)
+        CTL=$(terraform output controller_info)
+        echo "" >> $GITHUB_WORKSPACE/terraform.tfvars  # New line
+        echo "vpc_id = ${VPC_ID}" >> $GITHUB_WORKSPACE/terraform.tfvars
+        echo "" >> $GITHUB_WORKSPACE/terraform.tfvars
+        echo "controller_info = ${CTL}" >> $GITHUB_WORKSPACE/terraform.tfvars
+        popd
+      shell: bash
+    - name: Add Model
+      uses: ./cloud_providers/aws/vpc/add_model/action
+      with:
+        tfstate_path: $GITHUB_WORKSPACE/terraform.tfvars
+        module_path: cloud_providers/aws/vpc/add_model/action
+
+    # - name: Destroy VPC
+    #   if: always()
+    #   run: |
+    #     juju kill-controller ${{ inputs.controller_name }} --no-prompt
+    #     pushd cloud_providers/aws/vpc/action/
+    #     terraform destroy -auto-approve
+    #     popd
