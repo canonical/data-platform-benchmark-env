@@ -18,7 +18,7 @@ sudo apt install -y sshuttle python3 python3-jinja2
 
 ```
 sudo snap install terraform --channel=latest/stable --classic
-sudo snap install juju --channel=3.5/stable --classic
+sudo snap install juju --channel=3.6/stable --classic
 sudo snap install juju-wait
 ```
 
@@ -34,45 +34,21 @@ The deployment is divided between `cloud_providers`, which contain the setup of 
 ```
 +
 |
++--- actions/              Summaries of actions we can use for the different components (opensearch, kafka)
+|
+|
 +--- cloud_providers/      Configures the different VM clouds in Juju
 |     |
-|     +--- k8s/            This is a special cloud type: we can deploy (setup) or use add-k8s to add an existing k8s cluster
-|     +--- setup/          Folder containing the logic to create a new charmed-/microk8s: needs an existing env (another cloud) for that
-|
-+--- stacks/               Configures the different deployment scenarios and testing. Should be used once a model has been correctly added and configured
-|
-+--- examples/             Examples of complete terraform scripts that use modules from environment and scenarios for a deployment
+|     +--- aws/
+|         +--- k8s/        This is a special cloud type: we can deploy (setup) or use add-k8s to add an existing k8s cluster
+|         +--- setup/      Folder containing the logic to create a new charmed-/microk8s: needs an existing env (another cloud) for that
 |
 +--- utils/                Additional scripts, such as sshuttle setup.
 ```
 
 Start with the chosen `cloud_providers` when writing your terraform module. Optionally, use the `examples` folder to kickstart your code.
 
-# Deploying
-
-Choose the `cloud_providers` and `stacks` of interest and start the deployment with a new terraform module.
-
-First, make sure you bootstrap your deployment environment. Each environment folder has a `setup/`, which contains the module to bootstrap that given setup.
-
-Once the basic environment is created and, optionally, a jumphost to the internal network is set: bootstrap juju controller. Both setup and juju bootstrap can happen at the same time.
-
-Then, run the reminder of the deployment.
-
-If you have one single terraform script, it is advised to run something such as:
-```
-terraform apply -target module.<juju_bootstrap_instance>
-terraform apply
-```
-
-That will spin the entire environment.
-
-## Interacting with the environment
-
-The examples provided contains a sshuttle routine: it will setup a sshuttle daemon that will give access to the internal private network (e.g. private subnet in AWS VPC).
-
-Use the sshuttle script in `utils/` if you want to jump over a jumphost to your environment.
-
-# Adding a new providers, scenarios, etc
+# Adding a new cloud providers, actions, etc
 
 ## Where my new Terraform module goes?
 
@@ -91,10 +67,3 @@ Here is the step-by-step to add your new module to the right place:
 
 It is possible, with terraform, to automate non-juju cloud providers. That means, we need to have the target cloud's terraform provider to spin up all needed resources + VMs and then use manual provider in juju to add them up.
 
-## New Scenario
-
-If you plan to bring your own bundle once the deployment is done, then consider the following spaces:
-* internal-space: subnets isolated within the tenant and accessible only via a jumphost.
-* public-space:  subnets in the public networks, where a Floating/Elastic/Public IP can be assigned to the VM and it becomes externally reachable. In `examples`, this is used to setup the jumphost to access the private subnets
-
-Also, leave standard meta-arguments in the bundle as it will be used as a template for the deployments.
