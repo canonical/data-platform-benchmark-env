@@ -18,7 +18,7 @@ sudo apt install -y sshuttle python3 python3-jinja2
 
 ```
 sudo snap install terraform --channel=latest/stable --classic
-sudo snap install juju --channel=3.1/stable --classic
+sudo snap install juju --channel=3.5/stable --classic
 sudo snap install juju-wait
 ```
 
@@ -72,7 +72,24 @@ The examples provided contains a sshuttle routine: it will setup a sshuttle daem
 
 Use the sshuttle script in `utils/` if you want to jump over a jumphost to your environment.
 
-# Adding a new scenario
+# Adding a new providers, scenarios, etc
+
+## Where my new Terraform module goes?
+
+Here is the step-by-step to add your new module to the right place:
+```
+1) Is it juju-related? If not, then add to utils (e.g. how to setup a proxy or sshuttle)
+2) Is it to create a new cloud env? Use cloud_providers/
+  2.1) Is it to create a new cloud basic env (e.g. a new VPC), bootstrap a controller or add a new model? -> use the setup/, bootstrap/ and add_model/ respectively
+  2.2) Is it how to create a new k8s cluster on top of a given cloud (e.g. GKE, EKS)? Then use k8s/
+3) Is it to deploy an app, independent of any cloud? Then, use "stacks/"
+4) Is it to deploy an app, dependent of a given cloud? Then, use "cloud_providers/<cloud>/apps" (e.g. aws-integrator in charmed-k8s)
+5) Nothing of the above, you've just built a new terraform to bootstrap juju and do a bunch of things on top of all this --> examples/
+```
+
+## Non-juju cloud providers
+
+It is possible, with terraform, to automate non-juju cloud providers. That means, we need to have the target cloud's terraform provider to spin up all needed resources + VMs and then use manual provider in juju to add them up.
 
 ## New Scenario
 
@@ -81,23 +98,3 @@ If you plan to bring your own bundle once the deployment is done, then consider 
 * public-space:  subnets in the public networks, where a Floating/Elastic/Public IP can be assigned to the VM and it becomes externally reachable. In `examples`, this is used to setup the jumphost to access the private subnets
 
 Also, leave standard meta-arguments in the bundle as it will be used as a template for the deployments.
-
-## Where my new Terraform module goes?
-
-Here is the step-by-step to add your new module to the right place:
-1) Is it juju-related? If not, then add to utils (e.g. how to setup a proxy or sshuttle)
-2) Is it to create a new cloud env? Use cloud_providers/
-2.1) Is it to create a new cloud basic env (e.g. a new VPC), bootstrap a controller or add a new model? -> use the setup/, bootstrap/ and add_model/ respectively
-2.2) Is it how to create a new k8s cluster on top of a given cloud (e.g. GKE, EKS)? Then use k8s/
-3) Is it to deploy an app, independent of any cloud? Then, use "stacks/"
-4) Is it to deploy an app, dependent of a given cloud? Then, use "cloud_providers/<cloud>/apps" (e.g. aws-integrator in charmed-k8s)
-5) Nothing of the above, you've just built a new terraform to bootstrap and do a bunch of things on top of all this --> examples/
-
-# TODOs
-
-* Sshuttle should check if sudo is enabled without password, fail otherwise
-* COS Microk8s VM demands a list of IPs that is consecutive. That is used for metallb
-  We need a way to validate that list of IPs
-  Ideally, we should not need to specify that list of IPs and get it done by the provider itself
-* We need a way to manage the `tfstate` folder: it is important to remember that the state will contain sensitive information such as cloud access keys
-* Ideally, use TF_ARG instead of passing secrets via CLI
