@@ -1,0 +1,55 @@
+#!/usr/bin/python3
+
+import json
+import requests
+import sys
+import pandas as pd
+
+def fetch(url):
+    response = requests.get('{0}/api/v1/label/__name__/values'.format(url))
+    names = response.json()['data']
+    return names
+
+
+if len(sys.argv) != 3:
+    print('Usage: {0} http://<prometheus_URL> [1h]/[1d] period'.format(sys.argv[0]))
+    sys.exit(1)
+
+metrics = [i for i in fetch(sys.argv[1]) if i.startswith("node_") or i.startswith("kafka_")]
+
+content = {}
+
+for metric in metrics:
+     response = requests.get('{0}/api/v1/query'.format(sys.argv[1]),
+     params={'query': metric+sys.argv[2]})
+     results = response.json()['data']['result']
+
+     content[metric] = results
+
+     with open(f"{metric}.json", "w") as f:
+         f.write(json.dumps(results))
+
+
+
+#for metric in metrics:
+#    with open(f"{metric}.json") as f:
+#        content[metric] = json.loads(f.read())
+
+
+for metric in metrics:
+    dfs = []
+    for i in range(len(content[metric])):
+        print(f"{metric}: {i}")
+        metric_info = content[metric][i]['metric']
+        data = content[metric][i]
+        df = pd.DataFrame(data['values'], columns=['timestamp', 'value'])
+
+        # Add metric information to each row
+        for key, value in metric_info.items():
+            df[key] = value
+
+        dfs.append(df)
+    print("Concatenation happening")
+    combined_df = pd.concat(dfs, ignore_index=True)
+    print(combined_df)
+    combined_df.to_csv(f"{metric}.csv", index=False)
