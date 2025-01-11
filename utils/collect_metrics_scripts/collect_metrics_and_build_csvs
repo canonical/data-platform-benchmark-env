@@ -11,17 +11,22 @@ def fetch(url):
     return names
 
 
-if len(sys.argv) != 3:
-    print('Usage: {0} http://<prometheus_URL> [1h]/[1d] period'.format(sys.argv[0]))
+if len(sys.argv) != 4:
+    print('Usage: {0} http://<prometheus_URL> <[1h]/[1d] period> <juju_model_uuid>'.format(sys.argv[0]))
+    print('For example: ./collect_metrics.py http://192.168.100.99/cos-prometheus-0 [1d] eea785aa-5137-420e-8317-29732d9db1de')
     sys.exit(1)
 
-metrics = [i for i in fetch(sys.argv[1]) if i.startswith("node_") or i.startswith("kafka_")]
+metrics = [i for i in fetch(sys.argv[1]) if i.startswith("node_") or i.startswith("kafka_") or i.startswith("openmessaging_")]
+juju_model_uuid = sys.argv[3]
 
 content = {}
 
+
 for metric in metrics:
-     response = requests.get('{0}/api/v1/query'.format(sys.argv[1]),
-     params={'query': metric+sys.argv[2]})
+     response = requests.get(
+         '{0}/api/v1/query'.format(sys.argv[1]),
+         params={'query': f"{metric}{{juju_model_uuid=\"{juju_model_uuid}\"}}{sys.argv[2]}"},
+     )
      results = response.json()['data']['result']
 
      content[metric] = results
@@ -50,6 +55,11 @@ for metric in metrics:
 
         dfs.append(df)
     print("Concatenation happening")
-    combined_df = pd.concat(dfs, ignore_index=True)
-    print(combined_df)
-    combined_df.to_csv(f"{metric}.csv", index=False)
+
+    if len(dfs) == 0:
+        print(f"The {metric} is empty")
+    else:
+        combined_df = pd.concat(dfs, ignore_index=True)
+        print(combined_df)
+        combined_df.to_csv(f"{metric}.csv", index=False)
+
